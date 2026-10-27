@@ -1,0 +1,520 @@
+/**
+ * ==============================================================================
+ * HỆ THỐNG QUẢN LÝ CỬA HÀNG BÁN LAPTOP (TECHZONE)
+ * FILE: public/css/admin.css
+ * MÔ TẢ: Bảng màu chuẩn thống nhất và kiểu dáng giao diện Admin
+ * ==============================================================================
+ */
+
+/* 1. CSS VARIABLES (DESIGN TOKENS THỐNG NHẤT) */
+:root {
+    --tz-primary: #2563eb;
+    --tz-primary-hover: #1d4ed8;
+    --tz-primary-light: #eff6ff;
+    --tz-secondary: #64748b;
+    --tz-bg-body: #f8fafc;
+    --tz-card-bg: #ffffff;
+    --tz-sidebar-bg: #ffffff;
+    --tz-sidebar-text: #475569;
+    --tz-sidebar-active: #2563eb;
+    --tz-border: #e2e8f0;
+    --tz-text-heading: #0f172a;
+    --tz-text-body: #334155;
+    --tz-text-muted: #64748b;
+    --tz-success: #10b981;
+    --tz-success-light: #ecfdf5;
+    --tz-warning: #f59e0b;
+    --tz-warning-light: #fffbeb;
+    --tz-danger: #ef4444;
+    --tz-danger-light: #fef2f2;
+    --tz-info: #06b6d4;
+    --tz-info-light: #ecfeff;
+    --tz-radius-sm: 8px;
+    --tz-radius-md: 12px;
+    --tz-radius-lg: 16px;
+    --tz-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+    --tz-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+}
+
+/* 2. BASE STYLING */
+body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--tz-bg-body);
+    color: var(--tz-text-body);
+    font-size: 14px;
+    overflow-x: hidden;
+}
+
+/* 3. SIDEBAR NAVIGATION */
+.tz-sidebar {
+    width: 260px;
+    min-height: 100vh;
+    background-color: var(--tz-sidebar-bg);
+    border-right: 1px solid var(--tz-border);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.tz-sidebar-brand {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--tz-border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.tz-brand-logo {
+    width: 38px;
+    height: 38px;
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 20px;
+}
+
+.tz-brand-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--tz-text-heading);
+    letter-spacing: -0.3px;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.tz-brand-sub {
+    font-size: 11px;
+    color: var(--tz-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tz-menu-group {
+    padding: 16px 20px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #94a3b8;
+}
+
+.tz-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    margin: 4px 12px;
+    border-radius: var(--tz-radius-sm);
+    color: var(--tz-sidebar-text);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 13.5px;
+    transition: all 0.2s ease;
+}
+
+.tz-nav-link:hover {
+    background-color: #f1f5f9;
+    color: var(--tz-primary);
+}
+
+.tz-nav-link.active {
+    background-color: var(--tz-primary);
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+.tz-nav-link.active i {
+    color: #ffffff;
+}
+
+.tz-nav-link i {
+    font-size: 17px;
+    width: 20px;
+    text-align: center;
+    color: var(--tz-secondary);
+    transition: color 0.2s;
+}
+
+/* 4. TOPBAR & WRAPPER */
+.tz-main-wrapper {
+    margin-left: 260px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.tz-topbar {
+    height: 70px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--tz-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+}
+
+.tz-content-area {
+    padding: 28px 32px 40px;
+    flex: 1;
+}
+
+/* 5. CARDS & STAT METRICS */
+.tz-card {
+    background: var(--tz-card-bg);
+    border: 1px solid var(--tz-border);
+    border-radius: var(--tz-radius-md);
+    box-shadow: var(--tz-shadow);
+    margin-bottom: 24px;
+}
+
+.tz-card-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--tz-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tz-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--tz-text-heading);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tz-card-body {
+    padding: 24px;
+}
+
+.tz-metric-card {
+    background: #ffffff;
+    border: 1px solid var(--tz-border);
+    border-radius: var(--tz-radius-md);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+
+.tz-metric-card:hover {
+    box-shadow: var(--tz-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.tz-metric-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--tz-text-muted);
+    margin-bottom: 6px;
+}
+
+.tz-metric-value {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--tz-text-heading);
+    line-height: 1.1;
+}
+
+.tz-metric-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--tz-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+/* 6. DATA TABLES */
+.tz-table {
+    width: 100%;
+    margin: 0;
+    vertical-align: middle;
+}
+
+.tz-table thead th {
+    background-color: #f8fafc;
+    color: #64748b;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--tz-border);
+    white-space: nowrap;
+}
+
+.tz-table tbody td {
+    padding: 14px 10px;
+    border-bottom: 1px solid #f1f5f9;
+    color: var(--tz-text-body);
+    font-size: 13.5px;
+}
+
+.tz-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+/* 7. BADGES & PILLS */
+.tz-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.tz-badge-success {
+    background-color: var(--tz-success-light);
+    color: var(--tz-success);
+}
+
+.tz-badge-warning {
+    background-color: var(--tz-warning-light);
+    color: var(--tz-warning);
+}
+
+.tz-badge-danger {
+    background-color: var(--tz-danger-light);
+    color: var(--tz-danger);
+}
+
+.tz-badge-info {
+    background-color: var(--tz-info-light);
+    color: var(--tz-info);
+}
+
+.tz-badge-primary {
+    background-color: var(--tz-primary-light);
+    color: var(--tz-primary);
+}
+
+/* 8. BUTTONS */
+.btn-tz-primary {
+    background-color: var(--tz-primary);
+    border-color: var(--tz-primary);
+    color: #ffffff;
+    font-weight: 600;
+    border-radius: var(--tz-radius-sm);
+    padding: 8px 16px;
+    font-size: 13.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-tz-primary:hover {
+    background-color: var(--tz-primary-hover);
+    border-color: var(--tz-primary-hover);
+    color: #ffffff;
+}
+
+.btn-tz-outline {
+    background: #ffffff;
+    border: 1px solid var(--tz-border);
+    color: var(--tz-text-body);
+    font-weight: 600;
+    border-radius: var(--tz-radius-sm);
+    padding: 8px 14px;
+    font-size: 13.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-tz-outline:hover {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+    color: var(--tz-text-heading);
+}
+
+/* 9. FORM INPUTS */
+.form-control,
+.form-select {
+    border-color: var(--tz-border);
+    border-radius: var(--tz-radius-sm);
+    font-size: 13.5px;
+    padding: 9px 14px;
+    color: var(--tz-text-heading);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--tz-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+}
+
+/* 10. MODAL & DIALOGS */
+.modal-content {
+    border-radius: var(--tz-radius-md);
+    border: 1px solid var(--tz-border);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--tz-border);
+    padding: 18px 24px;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--tz-border);
+    padding: 16px 24px;
+}
+
+/* 11. THANH CUỘN SIÊU MỎNG & TINH TẾ (CUSTOM MODERN SCROLLBAR) */
+/* Áp dụng cho Webkit (Chrome, Edge, Safari, Brave, Opera) */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+    transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Áp dụng cho Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+/* Thanh cuộn chuyên biệt cho Sidebar */
+.tz-sidebar-menu {
+    max-height: calc(100vh - 85px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.tz-sidebar-menu::-webkit-scrollbar {
+    width: 4px;
+}
+
+.tz-sidebar-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tz-sidebar-menu::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 9999px;
+}
+
+.tz-sidebar:hover .tz-sidebar-menu::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+}
+
+.tz-sidebar-menu::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* 12. GIAO DIỆN TRANG TẠO MỚI (CREATE FORM STYLING THEO CHUẨN UI/UX PRO MAX) */
+.card-modern {
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: var(--tz-radius-md);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.card-header-modern {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fafbfc;
+    font-weight: 600;
+    font-size: 14.5px;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+}
+
+.card-body-modern {
+    padding: 1.5rem;
+}
+
+.dropzone-custom {
+    border: 2px dashed #cbd5e1;
+    border-radius: var(--tz-radius-md);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+}
+
+.dropzone-custom:hover {
+    border-color: var(--tz-primary);
+    background: #eff6ff;
+}
+
+.dropzone-icon {
+    font-size: 2.25rem;
+    color: #94a3b8;
+    margin-bottom: 0.5rem;
+    transition: color 0.2s ease;
+}
+
+.dropzone-custom:hover .dropzone-icon {
+    color: var(--tz-primary);
+}
+
+.btn-back-pill {
+    background: #ffffff;
+    border: 1px solid var(--tz-border);
+    color: var(--tz-text-heading);
+    font-weight: 500;
+    font-size: 13.5px;
+    padding: 8px 18px;
+    border-radius: 9999px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-back-pill:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: var(--tz-text-heading);
+}

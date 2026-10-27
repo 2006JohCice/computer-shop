@@ -1,0 +1,259 @@
+/* ==========================================================================
+   TECHZONE ADMIN - CATEGORY STYLES (GIAO DIỆN QUẢN LÝ DANH MỤC)
+   ========================================================================== */
+
+/* 1. KHUNG CARD CHỨA NỘI DUNG */
+.card-modern {
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.card-header-modern {
+    padding: 1.15rem 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fafafa;
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+}
+
+.card-body-modern {
+    padding: 1.5rem;
+}
+
+/* 2. CÁC Ô NHẬP LIỆU FORM */
+.form-group-custom {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #334155;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.form-control-custom {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.625rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    width: 100%;
+    transition: all 0.2s ease;
+    background-color: #ffffff;
+    color: #1e293b;
+}
+
+.form-control-custom:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    outline: none;
+}
+
+/* 3. KHUNG TẢI ẢNH ĐẠI DIỆN DANH MỤC */
+.dropzone-custom {
+    border: 2px dashed #cbd5e1;
+    border-radius: 0.875rem;
+    padding: 1.75rem 1.25rem;
+    text-align: center;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dropzone-custom:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.dropzone-icon {
+    font-size: 2.25rem;
+    color: #94a3b8;
+    margin-bottom: 0.5rem;
+}
+
+.preview-box {
+    position: relative;
+    display: inline-block;
+}
+
+.preview-img {
+    max-width: 100%;
+    max-height: 160px;
+    object-fit: contain;
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+}
+
+/* 4. CÔNG TẮC BẬT/TẮT (SWITCH TOGGLE) */
+.switch-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1rem;
+    border: 1px solid #f1f5f9;
+    border-radius: 0.625rem;
+    background: #f8fafc;
+    margin-bottom: 0.75rem;
+    transition: background 0.2s ease;
+}
+
+.switch-container:hover {
+    background: #f1f5f9;
+}
+
+.switch-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #334155;
+    margin: 0;
+}
+
+.switch-desc {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.custom-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.custom-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e1;
+    transition: 0.25s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.25s;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+input:checked + .slider {
+    background-color: #2563eb;
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+/* 5. LƯỚI CHỌN ICON DANH MỤC */
+.icon-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+
+.icon-pill {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 0.5rem;
+    padding: 0.6rem 0.4rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.icon-pill:hover {
+    border-color: #3b82f6;
+    color: #2563eb;
+    background: #eff6ff;
+}
+
+.icon-pill.active {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.icon-pill i {
+    font-size: 1.25rem;
+    display: block;
+    margin-bottom: 0.2rem;
+}
+
+.icon-pill span {
+    font-size: 0.7rem;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 6. XEM TRƯỚC ĐƯỜNG DẪN URL SLUG */
+.slug-preview {
+    background: #f1f5f9;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.4rem;
+}
+
+.slug-preview .slug-highlight {
+    color: #2563eb;
+    font-weight: 600;
+}
+
+/* 7. KHUNG XEM TRƯỚC TỐI ƯU GOOGLE (SEO SNIPPET) */
+.seo-preview-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.625rem;
+    padding: 1rem;
+    font-family: Arial, sans-serif;
+}
+
+.seo-title {
+    color: #1a0dab;
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 0.15rem;
+    cursor: pointer;
+}
+
+.seo-url {
+    color: #006621;
+    font-size: 0.8rem;
+    margin-bottom: 0.35rem;
+}
+
+.seo-desc {
+    color: #545454;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}

@@ -1,0 +1,49 @@
+# ========================================================
+# TECHZONE COMPUTER SHOP - GITIGNORE WHITELIST CONFIGURATION
+# Chỉ cho phép đẩy lên các thư mục và tệp cần thiết của dự án
+# ========================================================
+
+# 1. MẶC ĐỊNH BỎ QUA TẤT CẢ CÁC THƯ MỤC VÀ TỆP Ở GỐC
+/*
+
+# 2. DANH SÁCH THƯ MỤC CỐT LÕI ĐƯỢC PHÉP ĐẨY LÊN (WHITELIST)
+!/app/
+!/config/
+!/public/
+!/resources/
+!/database/
+
+# 3. DANH SÁCH FILE CẤU HÌNH GỐC ĐƯỢC PHÉP ĐẨY LÊN
+!.gitignore
+!README.md
+!composer.json
+!composer.lock
+!package.json
+!package-lock.json
+
+# 4. LOẠI TRỪ CÁC TỆP TẠM, BẢO MẬT & RÁC BÊN TRONG CÁC THƯ MỤC ĐƯỢC CHỌN
+# Tệp môi trường & bảo mật
+**/.env
+**/.env.*
+!**/.env.example
+
+# Tệp hệ điều hành
+**/.DS_Store
+**/Thumbs.db
+**/desktop.ini
+
+# Tệp IDE & Editor
+**/.vscode/
+**/.idea/
+**/*.sublime-*
+
+# Thư viện ngoài (Dependencies)
+**/node_modules/
+**/vendor/
+
+# Tệp log và bộ nhớ đệm
+**/*.log
+**/*.tmp
+**/*.bak
+**/cache/
+**/temp/

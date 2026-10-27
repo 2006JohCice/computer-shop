@@ -1,0 +1,7 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /computer-shop/public/
+
+    # Chuyển hướng các đường dẫn admin /admin/xxx sang /app/views/admin/xxx/
+    RewriteRule ^admin/([a-zA-Z0-9\-_]+)/?$ /computer-shop/app/views/admin/$1/index.php [L,QSA]
+</IfModule>

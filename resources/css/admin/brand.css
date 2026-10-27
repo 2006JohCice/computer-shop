@@ -1,0 +1,62 @@
+/* ==========================================================================
+   TECHZONE ADMIN - BRAND STYLES (GIAO DIỆN QUẢN LÝ THƯƠNG HIỆU)
+   ========================================================================== */
+
+/* 1. NÚT GỢI Ý THƯƠNG HIỆU NHANH */
+.brand-preset-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.65rem;
+    border-radius: 2rem;
+    font-size: 0.78rem;
+    background: #f1f5f9;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+    margin-right: 0.35rem;
+    margin-bottom: 0.35rem;
+    user-select: none;
+}
+
+.brand-preset-badge:hover {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #93c5fd;
+}
+
+/* 2. KHUNG HIỂN THỊ LOGO THƯƠNG HIỆU */
+.brand-logo-card {
+    width: 48px;
+    height: 48px;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    overflow: hidden;
+}
+
+.brand-logo-card img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* 3. KHUNG PREVIEW LOGO KHI TẢI LÊN */
+.brand-preview-box {
+    position: relative;
+    display: inline-block;
+    background: #f8fafc;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+}
+
+.brand-preview-img {
+    max-width: 100%;
+    max-height: 140px;
+    object-fit: contain;
+}

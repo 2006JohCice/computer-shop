@@ -1,0 +1,392 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --primary: #1d4ed8;
+    /* Deep Blue */
+    --primary-light: #3b82f6;
+    /* Bright Blue */
+    --primary-hover: #2563eb;
+    --bg-input: #f1f5f9;
+    --text-dark: #0f172a;
+    --text-muted: #64748b;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #ffffff;
+    color: var(--text-dark);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+}
+
+/* --- Layout Split --- */
+.login-split {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.login-left {
+    flex: 0 0 45%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    position: relative;
+    background-color: #ffffff;
+}
+
+.login-right {
+    flex: 1;
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    padding: 4rem;
+    border-top-left-radius: 40px;
+    border-bottom-left-radius: 40px;
+    box-shadow: -20px 0 50px rgba(29, 78, 216, 0.15);
+}
+
+/* --- Left Side: Form --- */
+.login-form-container {
+    width: 100%;
+    max-width: 400px;
+}
+
+.brand-header {
+    text-align: center;
+    margin-bottom: 3.5rem;
+}
+
+.brand-header h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    letter-spacing: -1px;
+}
+
+.brand-header .logo-icon {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--text-dark);
+}
+
+.brand-header p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-top: 0.5rem;
+    font-weight: 500;
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 1.1rem 1.25rem;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    background-color: var(--bg-input);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    outline: none;
+    font-family: inherit;
+    font-weight: 500;
+}
+
+.form-input:focus {
+    background-color: #ffffff;
+    border-color: var(--primary-light);
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.12);
+}
+
+.form-input::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 1.1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+    background-color: var(--primary-light);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 0.5rem;
+}
+
+.btn-submit:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.35);
+}
+
+.btn-submit:active {
+    transform: translateY(0);
+}
+
+.forgot-password {
+    display: block;
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.forgot-password:hover {
+    color: var(--primary-light);
+}
+
+/* --- Right Side: Graphics --- */
+.hero-content {
+    text-align: center;
+    z-index: 10;
+    margin-top: 3rem;
+}
+
+.hero-content h2 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    letter-spacing: -0.5px;
+}
+
+.hero-content p {
+    font-size: 1rem;
+    opacity: 0.85;
+    max-width: 450px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* CSS Constructed Dashboard Graphic */
+.dashboard-graphic {
+    position: relative;
+    width: 450px;
+    height: 350px;
+    margin-bottom: 1rem;
+    z-index: 10;
+    perspective: 1000px;
+}
+
+.float-card {
+    position: absolute;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Center main card */
+.fc-main {
+    width: 280px;
+    height: 180px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    animation: float 6s ease-in-out infinite;
+}
+
+/* Top left small card */
+.fc-tl {
+    width: 140px;
+    height: 100px;
+    top: 15%;
+    left: 5%;
+    z-index: 2;
+    padding: 1rem;
+    animation: float 5s ease-in-out infinite -2s;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+/* Right side medium card */
+.fc-r {
+    width: 160px;
+    height: 220px;
+    top: 25%;
+    right: 5%;
+    z-index: 4;
+    padding: 1rem;
+    animation: float 7s ease-in-out infinite -4s;
+}
+
+/* Bottom small card */
+.fc-b {
+    width: 180px;
+    height: 80px;
+    bottom: 5%;
+    left: 20%;
+    z-index: 5;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    animation: float 6s ease-in-out infinite -1s;
+}
+
+/* Mock UI Elements */
+.ui-line {
+    background: #e2e8f0;
+    border-radius: 4px;
+    height: 6px;
+}
+
+.ui-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 4px solid var(--primary-light);
+    border-left-color: #e2e8f0;
+}
+
+.ui-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #cbd5e1;
+}
+
+.ui-text-h {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-top: 8px;
+}
+
+.ui-text-p {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.ui-button {
+    height: 24px;
+    background: var(--primary-light);
+    border-radius: 4px;
+    margin-top: auto;
+}
+
+.chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 50px;
+    margin-top: 15px;
+}
+
+.chart-bars .bar {
+    flex: 1;
+    background: var(--primary-light);
+    border-radius: 3px 3px 0 0;
+}
+
+/* Decorative Background Glows */
+.glow {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: #ffffff;
+    filter: blur(100px);
+    border-radius: 50%;
+    opacity: 0.15;
+}
+
+.glow-1 {
+    top: -100px;
+    left: -100px;
+}
+
+.glow-2 {
+    bottom: -100px;
+    right: -100px;
+}
+
+@keyframes float {
+    0% {
+        transform: translate(-50%, -50%) translateY(0px);
+    }
+
+    50% {
+        transform: translate(-50%, -50%) translateY(-10px);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) translateY(0px);
+    }
+}
+
+.fc-tl,
+.fc-r,
+.fc-b {
+    animation-name: float-alt;
+}
+
+@keyframes float-alt {
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(12px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .login-left {
+        flex: 0 0 50%;
+    }
+}
+
+@media (max-width: 768px) {
+    .login-split {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    .login-left {
+        flex: none;
+        padding: 4rem 2rem;
+        min-height: 100vh;
+        border-radius: 0;
+    }
+
+    .login-right {
+        display: none;
+    }
+}

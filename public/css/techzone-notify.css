@@ -1,0 +1,294 @@
+/**
+ * TECHZONE GLOBAL NOTIFICATION & DIALOG SYSTEM (UI/UX PRO MAX)
+ * Dành chung cho cả Admin Portal và Client Storefront.
+ * Thiết kế chuẩn Glassmorphism, Micro-animations, Accessible & Responsive.
+ */
+
+/* Container chứa Toast cố định chắc chắn ở góc DƯỚI BÊN PHẢI (Bottom-Right) */
+.tz-toast-container {
+    position: fixed !important;
+    bottom: 24px !important;
+    right: 24px !important;
+    top: auto !important;
+    left: auto !important;
+    z-index: 99999 !important;
+    display: flex !important;
+    flex-direction: column-reverse !important;
+    gap: 12px !important;
+    pointer-events: none !important;
+    max-width: calc(100vw - 32px) !important;
+    width: 380px !important;
+}
+
+/* Thẻ Toast chuẩn Glassmorphism & UI/UX Pro Max */
+.tz-toast {
+    position: relative;
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 16px;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+    display: flex;
+    align-items: flex-start;
+    padding: 15px 18px 18px 16px;
+    gap: 14px;
+    transform: translateX(120%) scale(0.95);
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease, margin 0.35s ease;
+}
+
+.tz-toast.show {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+}
+
+.tz-toast.hide {
+    transform: translateX(120%) scale(0.9);
+    opacity: 0;
+    margin-bottom: -70px;
+    pointer-events: none;
+}
+
+/* Icon Box nhận diện trạng thái */
+.tz-toast-icon-wrap {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 21px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+}
+
+/* Biến thể màu sắc Toast & Thanh viền chạy phát quang */
+.tz-toast-success .tz-toast-icon-wrap {
+    background: #ecfdf5;
+    color: #10b981;
+}
+.tz-toast-success .tz-toast-progress-bar {
+    background: linear-gradient(90deg, #10b981, #059669);
+    color: #10b981;
+}
+
+.tz-toast-danger .tz-toast-icon-wrap {
+    background: #fef2f2;
+    color: #ef4444;
+}
+.tz-toast-danger .tz-toast-progress-bar {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+    color: #ef4444;
+}
+
+.tz-toast-warning .tz-toast-icon-wrap {
+    background: #fffbeb;
+    color: #f59e0b;
+}
+.tz-toast-warning .tz-toast-progress-bar {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+    color: #f59e0b;
+}
+
+.tz-toast-info .tz-toast-icon-wrap {
+    background: #eff6ff;
+    color: #2563eb;
+}
+.tz-toast-info .tz-toast-progress-bar {
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    color: #2563eb;
+}
+
+/* Nội dung Text Toast */
+.tz-toast-content {
+    flex-grow: 1;
+    min-width: 0;
+    padding-top: 1px;
+}
+
+.tz-toast-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 3px;
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tz-toast-message {
+    font-size: 13.5px;
+    color: #334155;
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.tz-toast-message strong {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+/* Nút tắt Toast */
+.tz-toast-close {
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 3px 6px;
+    font-size: 15px;
+    line-height: 1;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.tz-toast-close:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+/* ==================== VIỀN MÀU CHẠY THỜI GIAN (RUNNING PROGRESS BORDER) ==================== */
+.tz-toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: rgba(226, 232, 240, 0.6);
+    overflow: hidden;
+}
+
+.tz-toast-progress-bar {
+    height: 100%;
+    width: 100%;
+    box-shadow: 0 -1px 8px currentColor;
+}
+
+/* Viền màu chạy từ 100% về 0% theo đúng thời gian timer */
+.tz-toast.show .tz-toast-progress-bar {
+    animation: tzProgressRun var(--tz-toast-duration, 4000ms) linear forwards;
+}
+
+/* Khi người dùng di chuột vào Toast -> TẠM DỪNG viền màu chạy để người dùng đọc */
+.tz-toast:hover .tz-toast-progress-bar {
+    animation-play-state: paused !important;
+}
+
+@keyframes tzProgressRun {
+    0% {
+        width: 100%;
+    }
+    99% {
+        width: 0%;
+    }
+    100% {
+        width: 0%;
+    }
+}
+
+/* MODAL XÁC NHẬN CHUẨN UI/UX PRO MAX (CUSTOM DIALOG) */
+.tz-confirm-modal .modal-content {
+    border-radius: 20px;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.tz-confirm-modal .modal-header {
+    border-bottom: 1px solid #f1f5f9;
+    padding: 20px 24px 16px;
+}
+
+.tz-confirm-modal .modal-body {
+    padding: 24px;
+}
+
+.tz-confirm-modal .modal-footer {
+    border-top: 1px solid #f1f5f9;
+    padding: 16px 24px 20px;
+    background: #fafbfc;
+}
+
+/* Icon huy hiệu trên Modal */
+.tz-modal-badge {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: 16px;
+    position: relative;
+}
+
+.tz-modal-badge::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    opacity: 0.4;
+    animation: tzPulseRing 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+.tz-badge-danger {
+    background: #fee2e2;
+    color: #dc2626;
+}
+.tz-badge-danger::after {
+    background: #fca5a5;
+}
+
+.tz-badge-warning {
+    background: #fef3c7;
+    color: #d97706;
+}
+.tz-badge-warning::after {
+    background: #fcd34d;
+}
+
+.tz-badge-primary {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+.tz-badge-primary::after {
+    background: #7dd3fc;
+}
+
+.tz-badge-success {
+    background: #dcfce7;
+    color: #16a34a;
+}
+.tz-badge-success::after {
+    background: #86efac;
+}
+
+@keyframes tzPulseRing {
+    0% {
+        transform: scale(0.9);
+        opacity: 0.6;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+}
+
+/* Responsive tinh chỉnh trên điện thoại di động */
+@media (max-width: 576px) {
+    .tz-toast-container {
+        top: 12px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+    }
+}

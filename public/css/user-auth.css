@@ -1,0 +1,358 @@
+/**
+ * ==============================================================================
+ * HỆ THỐNG: QUẢN LÝ CỬA HÀNG BÁN LAPTOP (TECHZONE)
+ * FILE: public/css/user-auth.css
+ * MÔ TẢ: Giao diện Đăng nhập & Đăng ký Khách hàng (User Client)
+ * Học hỏi và tái hiện theo đúng phong cách split-screen của oder-xi.vercel.app
+ * ==============================================================================
+ */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+:root {
+    --user-auth-primary: #dc2626;          /* Màu đỏ nổi bật giống ảnh mẫu, có thể đổi sang #2563eb */
+    --user-auth-primary-hover: #b91c1c;
+    --user-auth-input-bg: #eff6ff;         /* Màu nền xanh nhạt cho ô input giống ảnh */
+    --user-auth-input-border: #dbeafe;
+    --user-auth-text-dark: #0f172a;
+    --user-auth-text-muted: #64748b;
+    --user-auth-right-overlay: linear-gradient(135deg, rgba(185, 28, 28, 0.92) 0%, rgba(127, 29, 29, 0.96) 100%);
+}
+
+/* KHUNG CHÍNH SPLIT 50/50 */
+.user-auth-wrapper {
+    display: flex;
+    min-height: 100vh;
+    background-color: #ffffff;
+}
+
+/* CỘT TRÁI: KHU VỰC FORM NHẬP LIỆU */
+.user-auth-left {
+    width: 48%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 40px;
+    background: #ffffff;
+}
+
+.user-auth-box {
+    width: 100%;
+    max-width: 440px;
+}
+
+/* BRAND LOGO CỘT TRÁI */
+.user-auth-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+    text-decoration: none;
+}
+
+.user-auth-brand-logo {
+    width: 32px;
+    height: 32px;
+    background: var(--user-auth-primary);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 18px;
+}
+
+.user-auth-brand-name {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--user-auth-primary);
+    letter-spacing: -0.5px;
+}
+
+/* TIÊU ĐỀ TRANG */
+.user-auth-heading {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--user-auth-text-dark);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.user-auth-subtitle {
+    font-size: 14px;
+    color: var(--user-auth-text-muted);
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+/* FORM NHẬP LIỆU */
+.user-form-group {
+    margin-bottom: 18px;
+}
+
+.user-form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--user-auth-text-dark);
+    margin-bottom: 6px;
+}
+
+.user-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.user-input-icon {
+    position: absolute;
+    left: 16px;
+    color: #94a3b8;
+    font-size: 16px;
+    pointer-events: none;
+    transition: color 0.2s ease;
+}
+
+.user-input-field {
+    width: 100%;
+    height: 48px;
+    padding: 10px 16px 10px 44px;
+    background-color: var(--user-auth-input-bg);
+    border: 1.5px solid var(--user-auth-input-border);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--user-auth-text-dark);
+    transition: all 0.2s ease;
+}
+
+.user-input-field:focus {
+    outline: none;
+    background-color: #ffffff;
+    border-color: var(--user-auth-primary);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.user-input-field:focus ~ .user-input-icon {
+    color: var(--user-auth-primary);
+}
+
+.user-password-toggle {
+    position: absolute;
+    right: 14px;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-password-toggle:hover {
+    color: var(--user-auth-text-dark);
+}
+
+/* REMEMBER & QUÊN MẬT KHẨU */
+.user-auth-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+    font-size: 13px;
+}
+
+.user-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--user-auth-text-dark);
+    cursor: pointer;
+    user-select: none;
+}
+
+.user-checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--user-auth-primary);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.user-forgot-link {
+    color: var(--user-auth-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.user-forgot-link:hover {
+    text-decoration: underline;
+}
+
+/* NÚT SUBMIT CHÍNH (CTA BUTTON) */
+.user-auth-btn {
+    width: 100%;
+    height: 48px;
+    background-color: var(--user-auth-primary);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25);
+}
+
+.user-auth-btn:hover {
+    background-color: var(--user-auth-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(220, 38, 38, 0.35);
+}
+
+.user-auth-btn:active {
+    transform: translateY(0);
+}
+
+/* CHUYỂN ĐỔI ĐĂNG KÝ / ĐĂNG NHẬP */
+.user-switch-link {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 13.5px;
+    color: var(--user-auth-text-muted);
+}
+
+.user-switch-link a {
+    color: var(--user-auth-primary);
+    text-decoration: none;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+.user-switch-link a:hover {
+    text-decoration: underline;
+}
+
+/* CỘT PHẢI: HÌNH ẢNH BANNER & SLOGAN LỚN */
+.user-auth-right {
+    width: 52%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    color: #ffffff;
+    background-color: #7f1d1d;
+    background-image: 
+        var(--user-auth-right-overlay),
+        url('https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=1200&q=80');
+    background-size: cover;
+    background-position: center;
+    text-align: center;
+}
+
+.user-right-content {
+    max-width: 480px;
+    z-index: 2;
+}
+
+.user-right-heading {
+    font-size: 38px;
+    font-weight: 800;
+    line-height: 1.25;
+    margin-bottom: 18px;
+    letter-spacing: -0.8px;
+}
+
+.user-right-description {
+    font-size: 15px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 32px;
+}
+
+/* BADGES THỦ TỤC / ĐẶC QUYỀN */
+.user-badges-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.user-badge-pill {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    padding: 8px 18px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.user-badge-pill:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+}
+
+/* NÚT CHAT HỖ TRỢ NỔI (FLOATING CHAT BUTTON) */
+.user-floating-chat {
+    position: absolute;
+    bottom: 28px;
+    right: 28px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--user-auth-primary);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    z-index: 10;
+}
+
+.user-floating-chat:hover {
+    transform: scale(1.08);
+    background-color: var(--user-auth-primary-hover);
+}
+
+/* RESPONSIVE TRÊN THIẾT BỊ DI ĐỘNG */
+@media (max-width: 992px) {
+    .user-auth-right {
+        display: none;
+    }
+
+    .user-auth-left {
+        width: 100%;
+        padding: 32px 20px;
+    }
+
+    .user-auth-box {
+        max-width: 400px;
+    }
+
+    .user-auth-heading {
+        font-size: 24px;
+    }
+}
