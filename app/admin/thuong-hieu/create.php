@@ -3,6 +3,59 @@
 $pageTitle = "Thêm thương hiệu đối tác mới";
 require_once dirname(__DIR__) . '/layouts/header.php';
 require_once dirname(__DIR__) . '/layouts/sidebar.php';
+
+
+include __DIR__ . "/../../config/database.php";
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die("Không thể kết nối ");
+}
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $maTH = $_POST['maTH'];
+    $tenTH = $_POST['maTH'];
+    $xuatXu = $_POST['xuatXu'];
+    $logo = $_POST['logo'];
+    $trangThai = $_POST['trangThai'];
+    $moTa = $_POST['moTa'];
+
+    $errors = [];
+    $sql_check = "SELECT maTH FROM thuonghieu WHERE maTH = '$maTH'";
+    $result_check = $conn->query($sql_check);
+    if ($result_check->num_rows > 0) {
+        $errors[] = 'Mã thương hiệu đã tồn tại';
+        // echo "<script>alert('Mã thương hiệu đã tồn tại');</script>";
+    }
+
+    if (empty($maTH)) {
+        $errors[] = 'Mã thương hiệu không được để trống';
+    }
+
+    if (empty($tenTH)) {
+        $errors[] = 'Tên thương hiệu không được để trống';
+    }
+
+    if (empty($xuatXu)) {
+        $errors[] = 'Xuất xứ không được để trống';
+    }
+
+    if (isset($trangThai) && $trangThai !== '1' && $trangThai !== '0') {
+        $errors[] = 'Trạng thái không hợp lệ';
+    }
+
+    if (empty($errors)) {
+        $sql_insert = "INSERT INTO thuonghieu (maTH, tenTH, xuatXu, logo, trangThai, moTa) VALUES ('$maTH', '$tenTH', '$xuatXu', '$logo', '$trangThai', '$moTa')";
+        $result_insert = $conn->query($sql_insert);
+        if ($result_insert) {
+            echo "<script> window.location.href='thuong-hieu.php';</script>";
+        } else {
+            echo "<script>alert('Lỗi khi thêm thương hiệu');</script>";
+        }
+    }
+}
+
+
+
 ?>
 
 <div class="tz-main-wrapper">
@@ -25,35 +78,47 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                 <i class="bi bi-arrow-left"></i> Quay lại
             </a>
         </div>
-
-        <form action="thuong-hieu.php" method="POST">
+        <?php if (!empty($errors)) { ?>
+            <div class="alert alert-danger border-danger-subtle d-flex align-items-start gap-3 p-3 mb-4 rounded-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill text-danger fs-5 mt-1"></i>
+                <div>
+                    <div class="fw-bold mb-1">Vui lòng kiểm tra lại các thông tin sau:</div>
+                    <ul class="mb-0 ps-3 small">
+                        <?php foreach ($errors as $err): ?>
+                            <li><?= htmlspecialchars($err) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            </div>
+        <?php } ?>
+        <form action="create.php" method="POST" enctype="multipart/form-data">
             <div class="card-modern">
                 <div class="card-header-modern">
-                    <i class="bi bi-info-circle me-2 text-primary"></i> Thông tin cơ bản thương hiệu (ThuongHieu)
+                    <i class="bi bi-info-circle me-2 text-primary"></i> Thông tin cơ bản thương hiệu
                 </div>
                 <div class="card-body-modern">
                     <div class="row g-3">
                         <div class="col-md-3">
-                            <label class="form-label">Mã thương hiệu (maTH) <span class="text-danger">*</span></label>
-                            <input type="text" name="maTH" class="form-control font-monospace text-uppercase" 
-                                   placeholder="VD: DELL, ASUS, MSI..." required>
-                            <small class="text-muted">Khóa chính (PK) viết tắt</small>
+                            <label class="form-label">Mã thương hiệu <span class="text-danger">*</span></label>
+                            <input type="text" name="maTH" class="form-control font-monospace text-uppercase"
+                                placeholder="VD: DELL, ASUS, MSI..." required>
+                            <!-- <small class="text-muted">Khóa chính (PK) viết tắt</small> -->
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label">Tên thương hiệu (tenTH) <span class="text-danger">*</span></label>
-                            <input type="text" name="tenTH" class="form-control" 
-                                   placeholder="VD: Dell Technologies, ASUStek Inc." required>
+                            <label class="form-label">Tên thương hiệu <span class="text-danger">*</span></label>
+                            <input type="text" name="tenTH" class="form-control"
+                                placeholder="VD: Dell Technologies, ASUStek Inc." required>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Xuất xứ / Quốc gia (xuatXu) <span class="text-danger">*</span></label>
-                            <input type="text" name="xuatXu" class="form-control" 
-                                   placeholder="VD: Hoa Kỳ, Đài Loan, Nhật Bản..." required>
+                            <label class="form-label">Xuất xứ / Quốc gia <span class="text-danger">*</span></label>
+                            <input type="text" name="xuatXu" class="form-control"
+                                placeholder="VD: Hoa Kỳ, Đài Loan, Nhật Bản..." required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Đường dẫn Logo / Biểu tượng (logo)</label>
-                            <input type="text" name="logo" class="form-control" 
-                                   placeholder="VD: assets/logo/dell.png hoặc bi-laptop">
-                            <small class="text-muted">Đường dẫn tệp hình ảnh hoặc tên icon Bootstrap</small>
+                            <label class="form-label">Đường dẫn Logo / Biểu tượng </label>
+                            <input type="text" name="logo" class="form-control"
+                                placeholder="VD: assets/logo/dell.png hoặc bi-laptop">
+                            <small class="text-muted">Sao Chép Icon Trên <a href="https://worldvectorlogo.com/" target="_blank">https://worldvectorlogo.com/</a></small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Trạng thái hợp tác (trangThai)</label>
@@ -73,8 +138,8 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                 <div class="card-body-modern">
                     <div class="mb-0">
                         <label class="form-label">Mô tả tóm tắt thương hiệu (moTa)</label>
-                        <textarea name="moTa" rows="3" class="form-control" 
-                                  placeholder="Nhập thông tin giới thiệu, lịch sử phát triển hoặc điểm nổi bật của dải sản phẩm laptop..."></textarea>
+                        <textarea name="moTa" rows="3" class="form-control"
+                            placeholder="Nhập thông tin giới thiệu, lịch sử phát triển hoặc điểm nổi bật của dải sản phẩm laptop..."></textarea>
                     </div>
                 </div>
             </div>

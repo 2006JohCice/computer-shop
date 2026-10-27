@@ -6,71 +6,71 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
 ?>
 
 <?php
-    include __DIR__ ."/../../config/database.php";
+include __DIR__ . "/../../config/database.php";
 
-    $conn = new mysqli($servername, $username, $password, $dbname);
-    if($conn->connect_error){
-       die("Connection failed: " . $conn->connect_error);
-    }
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
 
-    $totalActive = 0;
-    $sqlTotalActive = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 0";
-    $resultTotalActive = $conn->query($sqlTotalActive);
-    if ($resultTotalActive && $resultTotalActive->num_rows > 0) {
-        while ($row = $resultTotalActive->fetch_assoc()) {
-            $totalActive = $row['total'];
-        }
+$totalActive = 0;
+$sqlTotalActive = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 0";
+$resultTotalActive = $conn->query($sqlTotalActive);
+if ($resultTotalActive && $resultTotalActive->num_rows > 0) {
+    while ($row = $resultTotalActive->fetch_assoc()) {
+        $totalActive = $row['total'];
     }
+}
 
-    $totalInStock = 0;
-    $sqlInStock = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 0 AND soLuongTon > 0";
-    $resultInStock = $conn->query($sqlInStock);
-    if ($resultInStock && $resultInStock->num_rows > 0) {
-        while ($row = $resultInStock->fetch_assoc()) {
-            $totalInStock = $row['total'];
-        }
+$totalInStock = 0;
+$sqlInStock = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 0 AND soLuongTon > 0";
+$resultInStock = $conn->query($sqlInStock);
+if ($resultInStock && $resultInStock->num_rows > 0) {
+    while ($row = $resultInStock->fetch_assoc()) {
+        $totalInStock = $row['total'];
     }
+}
 
-    $totalOutOfStock = 0;
-    $sqlOutOfStock = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 0 AND soLuongTon = 0";
-    $resultOutOfStock = $conn->query($sqlOutOfStock);
-    if ($resultOutOfStock && $resultOutOfStock->num_rows > 0) {
-        while ($row = $resultOutOfStock->fetch_assoc()) {
-            $totalOutOfStock = $row['total'];
-        }
+$totalOutOfStock = 0;
+$sqlOutOfStock = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 0 AND soLuongTon = 0";
+$resultOutOfStock = $conn->query($sqlOutOfStock);
+if ($resultOutOfStock && $resultOutOfStock->num_rows > 0) {
+    while ($row = $resultOutOfStock->fetch_assoc()) {
+        $totalOutOfStock = $row['total'];
     }
+}
 
- 
-    $totalTrash = 0;
-    $sqlTrash = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 1";
-    $resultTrash = $conn->query($sqlTrash);
-    if ($resultTrash && $resultTrash->num_rows > 0) {
-        while ($row = $resultTrash->fetch_assoc()) {
-            $totalTrash = $row['total'];
-        }
+
+$totalTrash = 0;
+$sqlTrash = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 1";
+$resultTrash = $conn->query($sqlTrash);
+if ($resultTrash && $resultTrash->num_rows > 0) {
+    while ($row = $resultTrash->fetch_assoc()) {
+        $totalTrash = $row['total'];
     }
+}
 ?>
 
 <?php
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $maSP = $_POST['maSP'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $maSP = $_POST['maSP'];
 
-            // echo $maSP;
+    // echo $maSP;
 
-            $sqlDeleteSoft = "UPDATE sanpham SET isDeleted = 1 WHERE maSP = '$maSP'";
-            
-            $resultSql = $conn->query($sqlDeleteSoft);
-            echo $resultSql;
+    $sqlDeleteSoft = "UPDATE sanpham SET isDeleted = 1 WHERE maSP = '$maSP'";
 
-            if($resultSql === TRUE){
-                echo "<script>
+    $resultSql = $conn->query($sqlDeleteSoft);
+    echo $resultSql;
+
+    if ($resultSql === TRUE) {
+        echo "<script>
                         window.location.href='san-pham.php?tab=active';
                     </script>";
-            } else {
-                echo "<script>alert('Lỗi khi chuyển sản phẩm vào Thùng rác');</script>";
-            }
+    } else {
+        echo "<script>alert('Lỗi khi chuyển sản phẩm vào Thùng rác');</script>";
+    }
 }
-    
+
 ?>
 
 
@@ -79,7 +79,7 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
     <?php require_once dirname(__DIR__) . '/layouts/topbar.php'; ?>
 
     <main class="tz-content-area">
-   
+
 
         <!-- Header trang & Action buttons -->
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
@@ -165,7 +165,7 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
         <div class="tz-card mb-4">
             <div class="tz-card-body p-3">
                 <form action="san-pham.php" method="GET" class="row g-2 align-items-center">
-                   
+
                     <div class="col-xl-4 col-md-4">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
@@ -173,23 +173,23 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                         </div>
                     </div>
 
-                 
+
 
                     <div class="col-xl-2 col-md-3 col-sm-6">
-                       <select name="danhMuc" class="form-select">
+                        <select name="danhMuc" class="form-select">
                             <option value="">Tất cả danh mục</option>
                             <?php
-                                $sqlCategory = "SELECT * FROM danhmuc WHERE trangThai ='1'";
-                                $resultCategory = $conn->query($sqlCategory);
-                                if($resultCategory->num_rows > 0){
-                                    while($row = $resultCategory->fetch_assoc()){
-                                        $maDM = $row["maDM"];
-                                        $tenDM = $row["tenDM"];
+                            $sqlCategory = "SELECT * FROM danhmuc WHERE trangThai ='1'";
+                            $resultCategory = $conn->query($sqlCategory);
+                            if ($resultCategory->num_rows > 0) {
+                                while ($row = $resultCategory->fetch_assoc()) {
+                                    $maDM = $row["maDM"];
+                                    $tenDM = $row["tenDM"];
                             ?>
-                            <option value="<?= $maDM ?>"><?= $tenDM ?></option>
+                                    <option value="<?= $maDM ?>"><?= $tenDM ?></option>
                             <?php
-                                    }
                                 }
+                            }
                             ?>
                         </select>
                     </div>
@@ -197,17 +197,17 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                         <select name="thuongHieu" class="form-select">
                             <option value="">Tất cả thương hiệu</option>
                             <?php
-                                $sqlBrand = "SELECT * FROM thuonghieu WHERE trangThai ='1'";
-                                $resultBrand = $conn->query($sqlBrand);
-                                if($resultBrand->num_rows > 0){
-                                    while($row = $resultBrand->fetch_assoc()){
-                                        $maTH = $row["maTH"];
-                                        $tenTH = $row["tenTH"];
+                            $sqlBrand = "SELECT * FROM thuonghieu WHERE trangThai ='1'";
+                            $resultBrand = $conn->query($sqlBrand);
+                            if ($resultBrand->num_rows > 0) {
+                                while ($row = $resultBrand->fetch_assoc()) {
+                                    $maTH = $row["maTH"];
+                                    $tenTH = $row["tenTH"];
                             ?>
-                            <option value="<?= $maTH ?>"><?= $tenTH ?></option>
+                                    <option value="<?= $maTH ?>"><?= $tenTH ?></option>
                             <?php
-                                    }
                                 }
+                            }
                             ?>
                         </select>
                     </div>
@@ -251,71 +251,71 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
         <div class="tz-card">
             <div class="table-responsive">
                 <table class="tz-table">
-                <thead>
-                    <tr>
-                        <th style="width: 80px;">MÃ SP</th>
-                        <th>TÊN SẢN PHẨM & CẤU HÌNH</th>
-                        <th>DANH MỤC</th>
-                        <th>THƯƠNG HIỆU</th>
-                        <th>GIÁ BÁN (VNĐ)</th>
-                        <th>TỒN KHO</th>
-                        <th>BẢO HÀNH</th>
-                        <th>VỊ TRÍ KHO</th>
-                        <th>TRẠNG THÁI</th>
-                        <th class="text-end" style="width: 120px;">HÀNH ĐỘNG</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">MÃ SP</th>
+                            <th>TÊN SẢN PHẨM & CẤU HÌNH</th>
+                            <th>DANH MỤC</th>
+                            <th>THƯƠNG HIỆU</th>
+                            <th>GIÁ BÁN (VNĐ)</th>
+                            <th>TỒN KHO</th>
+                            <th>BẢO HÀNH</th>
+                            <th>VỊ TRÍ KHO</th>
+                            <th>TRẠNG THÁI</th>
+                            <th class="text-end" style="width: 120px;">HÀNH ĐỘNG</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
 
-                    $search = $_GET["search"] ?? "";
-                    $category = $_GET["danhMuc"] ?? "";
-                    $brand = $_GET["thuongHieu"] ?? "";
-                    $status = $_GET["trangthai"] ?? "";
+                        $search = $_GET["search"] ?? "";
+                        $category = $_GET["danhMuc"] ?? "";
+                        $brand = $_GET["thuongHieu"] ?? "";
+                        $status = $_GET["trangthai"] ?? "";
 
-                    $sql = "SELECT sp.*, dm.tenDM, th.tenTH 
+                        $sql = "SELECT sp.*, dm.tenDM, th.tenTH 
                             FROM sanpham sp 
                             LEFT JOIN danhmuc dm ON sp.maDM = dm.maDM
                             LEFT JOIN thuonghieu th ON sp.maTH = th.maTH
                             WHERE sp.isDeleted = 0";
 
-                    if ($search != "") {
-                 
-                        $sql .= " AND sp.tenSP LIKE '%$search%'";
-                    }
+                        if ($search != "") {
 
-                    if ($category != "") {
-                       
-                        $sql .= " AND sp.maDM = '$category'";
-                    }
+                            $sql .= " AND sp.tenSP LIKE '%$search%'";
+                        }
 
-                    if ($brand != "") {
-                       
-                        $sql .= " AND sp.maTH = '$brand'";
-                    }
+                        if ($category != "") {
 
-                    if ($status != "") {
-                       
-                        $sql .= " AND sp.trangThai = '$status'";
-                    }
+                            $sql .= " AND sp.maDM = '$category'";
+                        }
 
-                    $resultProducts = $conn->query($sql);
+                        if ($brand != "") {
 
-                    
+                            $sql .= " AND sp.maTH = '$brand'";
+                        }
+
+                        if ($status != "") {
+
+                            $sql .= " AND sp.trangThai = '$status'";
+                        }
+
+                        $resultProducts = $conn->query($sql);
+
+
                         if ($resultProducts->num_rows > 0) {
-                            while($row = $resultProducts->fetch_assoc()){
-                               
+                            while ($row = $resultProducts->fetch_assoc()) {
+
                                 $maSP = $row["maSP"];
                                 $tenSP = $row["tenSP"];
-                                $tenDM = $row["tenDM"]; 
-                                $tenTH = $row["tenTH"]; 
+                                $tenDM = $row["tenDM"];
+                                $tenTH = $row["tenTH"];
                                 $thongSo = $row["thongSoKyThuat"];
                                 $giaBan = number_format($row["giaBan"], 0, ',', '.');
                                 $soLuongTon = $row["soLuongTon"];
                                 $thoiGianBaoHanh = $row["thoiGianBaoHanh"];
                                 $viTriKho = $row["viTriKho"];
                                 $trangThai = $row["trangThai"];
-                    ?>
+                        ?>
                                 <tr>
                                     <td><span class="badge bg-light text-dark border font-monospace"><?= $maSP ?></span></td>
                                     <td>
@@ -326,7 +326,7 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                                     <td><span class="fw-bold text-primary"><?= $tenTH ?></span></td>
                                     <td><span class="fw-bold text-danger"><?= $giaBan ?> ₫</span></td>
                                     <td>
-                                        <?php if($soLuongTon > 0): ?>
+                                        <?php if ($soLuongTon > 0): ?>
                                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold">
                                                 <?= $soLuongTon ?> chiếc
                                             </span>
@@ -339,7 +339,7 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                                     <td><span class="badge bg-light text-secondary border"><?= $thoiGianBaoHanh ?> tháng</span></td>
                                     <td><small class="text-muted"><i class="bi bi-geo-alt-fill text-danger me-1"></i><?= $viTriKho ?></small></td>
                                     <td>
-                                        <?php if($trangThai == 1): ?>
+                                        <?php if ($trangThai == 1): ?>
                                             <span class="tz-badge tz-badge-success"><i class="bi bi-eye"></i>Hiển thị</span>
                                         <?php else: ?>
                                             <span class="tz-badge tz-badge-secondary"><i class="bi bi-eye-slash"></i>Ẩn</span>
@@ -348,25 +348,47 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                                     <td class="text-end">
                                         <div class="d-inline-flex gap-1">
                                             <a href="edit.php?id=<?= $maSP ?>" class="btn btn-sm btn-outline-primary" title="Sửa thông tin"><i class="bi bi-pencil-square"></i></a>
-                                            
+
                                             <!-- Form Xóa Mềm -->
                                             <form method="POST" action="san-pham.php" class="d-inline">
                                                 <input type="hidden" name="maSP" value="<?= $maSP ?>">
-                                                <button type="submit" 
-                                                class="btn btn-sm btn-outline-danger" 
-                                                title="Chuyển thùng rác" 
-                                                data-tz-confirm="Bạn có chắc muốn chuyển sản phẩm <?= $maSP ?> vào Thùng rác?" 
-                                                data-tz-title="Xác nhận chuyển thùng rác"><i class="bi bi-trash3"></i></button>
+                                                <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    title="Chuyển thùng rác"
+                                                    data-tz-confirm="Bạn có chắc muốn chuyển sản phẩm <?= $maSP ?> vào Thùng rác?"
+                                                    data-tz-title="Xác nhận chuyển thùng rác"><i class="bi bi-trash3"></i></button>
                                             </form>
                                         </div>
                                     </td>
                                 </tr>
-                    <?php 
+                            <?php
                             }
-                        }
-                    ?>
-                </tbody>
-                     
+                        } else {
+
+
+                            ?>
+                            <tr>
+                                <td colspan="10" class="text-center py-5">
+                                    <div class="d-flex flex-column align-items-center justify-content-center py-4">
+                                        <div class="tz-modal-badge tz-badge-warning mb-3" style="width: 64px; height: 64px; font-size: 28px;">
+                                            <i class="bi bi-folder-x"></i>
+                                        </div>
+                                        <h5 class="fw-bold text-dark mb-1">Không tìm thấy Sản Phẩm nào</h5>
+                                        <p class="text-muted small mb-3">Hiện chưa có Sản Phẩm máy nào trong hệ thống hoặc không khớp với bộ lọc tìm kiếm.</p>
+                                        <div class="d-flex gap-2">
+                                            <a href="san-pham.php" class="btn btn-sm btn-outline-primary px-3 rounded-pill">
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i>Tải lại danh sách
+                                            </a>
+                                            <a href="create.php" class="btn btn-sm btn-tz-primary px-3 rounded-pill">
+                                                <i class="bi bi-plus-lg me-1"></i>Thêm Sản Phẩm mới
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php } ?>
+                    </tbody>
+
                     </tbody>
                 </table>
             </div>

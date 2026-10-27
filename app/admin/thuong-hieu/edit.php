@@ -4,7 +4,77 @@ $pageTitle = "Chỉnh sửa thương hiệu đối tác";
 require_once dirname(__DIR__) . '/layouts/header.php';
 require_once dirname(__DIR__) . '/layouts/sidebar.php';
 
-$maTH = htmlspecialchars($_GET['maTH'] ?? 'DELL');
+$maTH = htmlspecialchars($_GET['maTH'] ?? '');
+include __DIR__ . "/../../config/database.php";
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die($conn->connect_error);
+}
+$errors = [];
+$sql = "SELECT * FROM thuonghieu WHERE maTH ='$maTH'";
+$resultSql = $conn->query($sql);
+
+if ($resultSql->num_rows > 0) {
+    $row = $resultSql->fetch_assoc();
+    $tenTH = $row['tenTH'];
+    $xuatXu = $row['xuatXu'];
+    $moTa = $row['moTa'];
+    $logo = $row['logo'];
+    $trangThai = $row['trangThai'];
+}
+
+
+if ($_SERVER["REQUEST_METHOD"] == 'POST') {
+    $maTHEdit = trim($_POST['maTH'] ?? '');
+    $tenTHEdit = trim($_POST['tenTH'] ?? '');
+    $xuatXuEdit = trim($_POST['xuatXu'] ?? '');
+    $moTaEdit = trim($_POST['moTa'] ?? '');
+    $logoEdit = trim($_POST['logo'] ?? '');
+    $trangThaiEdit = $_POST['trangThai'] ?? 1;
+
+    // echo $maTHEdit;
+    // echo "<br>";
+    // echo $tenTHEdit;
+    // echo "<br>";
+    // echo $xuatXuEdit;
+    // echo "<br>";
+    // echo $moTaEdit;
+    // echo "<br>";
+    // echo $logoEdit;
+    // echo "<br>";
+    // echo $trangThaiEdit;
+    // echo "<br>";
+
+
+    if (empty($xuatXuEdit)) {
+        $errors[] = "Xuất xứ không được để trống.";
+    }
+    if ($trangThaiEdit !== '1' && $trangThaiEdit !== '0') {
+        $errors[] = "Trạng thái không hợp lệ.";
+    }
+
+    if (empty($logoEdit)) {
+        $errors[] = "Logo không được để trống.";
+    }
+    if (empty($tenTHEdit)) {
+        $errors[] = "Tên thương hiệu không được để trống.";
+    }
+
+
+    if (empty($errors)) {
+        $sqlUpdate = "UPDATE thuonghieu SET tenTH='$tenTHEdit', xuatXu='$xuatXuEdit', moTa='$moTaEdit', logo='$logoEdit', trangThai='$trangThaiEdit' WHERE maTH='$maTHEdit'";
+        $resultSqlUpdate = $conn->query($sqlUpdate);
+        if ($resultSqlUpdate) {
+            echo "<script>";
+            echo "window.location.href='thuong-hieu.php';";
+            echo "</script>";
+        } else {
+            $errors[] = "Cập nhật thất bại";
+        }
+    }
+}
+
+
 ?>
 
 <div class="tz-main-wrapper">
@@ -27,42 +97,54 @@ $maTH = htmlspecialchars($_GET['maTH'] ?? 'DELL');
                 <i class="bi bi-arrow-left"></i> Quay lại
             </a>
         </div>
+        <?php if (!empty($errors)) { ?>
+            <div class="alert alert-danger border-danger-subtle d-flex align-items-start gap-3 p-3 mb-4 rounded-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill text-danger fs-5 mt-1"></i>
+                <div>
+                    <div class="fw-bold mb-1">Vui lòng kiểm tra lại các thông tin sau:</div>
+                    <ul class="mb-0 ps-3 small">
+                        <?php foreach ($errors as $err): ?>
+                            <li><?= htmlspecialchars($err) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            </div>
+        <?php } ?>
 
-        <form action="thuong-hieu.php" method="POST">
+        <form action="" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="action" value="update">
 
             <div class="card-modern">
                 <div class="card-header-modern">
-                    <i class="bi bi-info-circle me-2 text-primary"></i> Thông tin cơ bản thương hiệu (ThuongHieu)
+                    <i class="bi bi-info-circle me-2 text-primary"></i> Thông tin cơ bản thương hiệu
                 </div>
                 <div class="card-body-modern">
                     <div class="row g-3">
                         <div class="col-md-3">
-                            <label class="form-label">Mã thương hiệu (maTH) <span class="text-danger">*</span></label>
-                            <input type="text" name="maTH" class="form-control font-monospace bg-light text-uppercase" 
-                                   value="<?= $maTH ?>" readonly>
-                            <small class="text-muted">Khóa chính (PK)</small>
+                            <label class="form-label">Mã thương hiệu <span class="text-danger">*</span></label>
+                            <input type="text" name="maTH" class="form-control font-monospace bg-light text-uppercase"
+                                value="<?= $maTH ?>" readonly>
+                            <!-- <small class="text-muted">Khóa chính (PK)</small> -->
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label">Tên thương hiệu (tenTH) <span class="text-danger">*</span></label>
-                            <input type="text" name="tenTH" class="form-control" 
-                                   value="Dell Technologies" required>
+                            <label class="form-label">Tên thương hiệu <span class="text-danger">*</span></label>
+                            <input type="text" name="tenTH" class="form-control"
+                                value="<?= $tenTH ?>" required>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Xuất xứ / Quốc gia (xuatXu) <span class="text-danger">*</span></label>
-                            <input type="text" name="xuatXu" class="form-control" 
-                                   value="Hoa Kỳ (USA)" required>
+                            <label class="form-label">Xuất xứ / Quốc gia <span class="text-danger">*</span></label>
+                            <input type="text" name="xuatXu" class="form-control"
+                                value="<?= $xuatXu ?>" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Biểu tượng / Logo (logo)</label>
-                            <input type="text" name="logo" class="form-control" 
-                                   value="bi-pc-display">
+                            <label class="form-label">Biểu tượng / Logo </label>
+                            <input type="text" name="logo" class="form-control" value="<?= $logo ?>">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Trạng thái hợp tác (trangThai)</label>
+                            <label class="form-label">Trạng thái hợp tác </label>
                             <select name="trangThai" class="form-select">
-                                <option value="1" selected>1 - Đang hợp tác phân phối</option>
-                                <option value="0">0 - Ngừng hợp tác</option>
+                                <option value="1" <?= $trangThai == '1' ? 'selected' : '' ?>>1 - Đang hợp tác phân phối</option>
+                                <option value="0" <?= $trangThai == '0' ? 'selected' : '' ?>>0 - Ngừng hợp tác</option>
                             </select>
                         </div>
                     </div>
@@ -71,12 +153,12 @@ $maTH = htmlspecialchars($_GET['maTH'] ?? 'DELL');
 
             <div class="card-modern">
                 <div class="card-header-modern">
-                    <i class="bi bi-file-text me-2 text-primary"></i> Mô tả tóm tắt thương hiệu (moTa)
+                    <i class="bi bi-file-text me-2 text-primary"></i> Mô tả tóm tắt thương hiệu
                 </div>
                 <div class="card-body-modern">
                     <div class="mb-0">
-                        <label class="form-label">Mô tả đặc điểm tiêu biểu (moTa)</label>
-                        <textarea name="moTa" rows="3" class="form-control">Tập đoàn công nghệ Mỹ, chuyên dòng laptop doanh nhân XPS, Inspiron, Latitude và gaming Alienware</textarea>
+                        <label class="form-label">Mô tả đặc điểm tiêu biểu </label>
+                        <textarea name="moTa" rows="3" class="form-control"><?= $moTa ?></textarea>
                     </div>
                 </div>
             </div>

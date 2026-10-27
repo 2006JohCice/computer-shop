@@ -2,49 +2,47 @@
 // app/views/admin/danh-muc/create.php
 $pageTitle = "Thêm danh mục laptop mới";
 require_once dirname(__DIR__) . '/layouts/header.php';
-// require_once dirname(__DIR__) . '/layouts/sidebar.php';
+require_once dirname(__DIR__) . '/layouts/sidebar.php';
 ?>
 
 <?php
-    include __DIR__ . "/../../config/database.php";
-    $conn = new mysqli($servername, $username, $password, $dbname);
-    if($conn->connect_error){
-        die("Connection failed: " . $conn->connect_error);
+include __DIR__ . "/../../config/database.php";
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $tenDM = $_POST['tenDM'];
+    $maKM = $_POST['maKM'];
+
+
+    $moTa = $_POST['moTa'];
+    $trangThai = $_POST['trangThai'];
+    // echo $tenDM;
+    // echo "<br/>";
+    // echo $maKM;
+    // echo "<br/>";
+    // echo $moTa;
+    // echo "<br/>";
+    // echo $trangThai;
+
+    if (empty($maKM)) {
+        $sql = "INSERT INTO danhmuc (tenDM,maKM, moTa, trangThai) VALUES ('$tenDM', NULL,'$moTa', '$trangThai')";
+    } else {
+        $sql = "INSERT INTO danhmuc (tenDM, maKM, moTa, trangThai) VALUES ('$tenDM', '$maKM', '$moTa', '$trangThai')";
     }
 
-    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-        $tenDM = $_POST['tenDM'];
-        $maKM = $_POST['maKM'];
-
-
-        $moTa = $_POST['moTa'];
-        $trangThai = $_POST['trangThai'];
-        // echo $tenDM;
-        // echo "<br/>";
-        // echo $maKM;
-        // echo "<br/>";
-        // echo $moTa;
-        // echo "<br/>";
-        // echo $trangThai;
-
-        if(empty($maKM)){
-            $sql = "INSERT INTO danhmuc (tenDM,maKM, moTa, trangThai) VALUES ('$tenDM', NULL,'$moTa', '$trangThai')";
-
-        }else{
-            $sql = "INSERT INTO danhmuc (tenDM, maKM, moTa, trangThai) VALUES ('$tenDM', '$maKM', '$moTa', '$trangThai')";
-
-        }
-
-        $result = $conn->query($sql);
-        // echo $sql;
-        if ($result == TRUE) {
-            echo "<script> window.location.href='danh-muc.php';</script>";
-        } else {
-            echo "<script>alert('Lỗi khi thêm danh mục');</script>";
-        }
+    $result = $conn->query($sql);
+    // echo $sql;
+    if ($result == TRUE) {
+        echo "<script> window.location.href='danh-muc.php';</script>";
+    } else {
+        echo "<script>alert('Lỗi khi thêm danh mục');</script>";
     }
+}
 
-    
+
 ?>
 
 
@@ -85,24 +83,24 @@ require_once dirname(__DIR__) . '/layouts/header.php';
                             <small class="text-muted">Mã định danh số nguyên (int PK)</small>
                         </div> -->
                         <div class="col-md-5">
-                            <label class="form-label">Tên danh mục laptop  <span class="text-danger">*</span></label>
-                            <input type="text" name="tenDM" class="form-control" 
-                                   placeholder="Ví dụ: Laptop Gaming, Laptop Mỏng Nhẹ..." required>
+                            <label class="form-label">Tên danh mục laptop <span class="text-danger">*</span></label>
+                            <input type="text" name="tenDM" class="form-control"
+                                placeholder="Ví dụ: Laptop Gaming, Laptop Mỏng Nhẹ..." required>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Áp dụng Khuyến Mãi  <small class="text-muted"></small></label>
+                            <label class="form-label">Áp dụng Khuyến Mãi <small class="text-muted"></small></label>
                             <select name="maKM" class="form-select">
                                 <option value="">-- Không áp dụng --</option>
-                                <?php 
+                                <?php
                                 $sqlKM = "SELECT * FROM khuyenmai";
                                 $resultKM = $conn->query($sqlKM);
-                                if($resultKM->num_rows > 0){
-                                    while($row = $resultKM->fetch_assoc()){
-                                        $maKM = $row["maKM"] ;
-                                        $tenKM = $row["tenKM"] ;
-                           
+                                if ($resultKM->num_rows > 0) {
+                                    while ($row = $resultKM->fetch_assoc()) {
+                                        $maKM = $row["maKM"];
+                                        $tenKM = $row["tenKM"];
+
                                 ?>
-                                <option value="<?php echo $maKM?>"><?=$tenKM  ?></option>
+                                        <option value="<?php echo $maKM ?>"><?= $tenKM  ?></option>
 
                                 <?php
                                     }
@@ -110,8 +108,8 @@ require_once dirname(__DIR__) . '/layouts/header.php';
                                 $conn->close();
                                 ?>
 
-                                
-                               
+
+
                             </select>
                         </div>
                     </div>
@@ -126,8 +124,8 @@ require_once dirname(__DIR__) . '/layouts/header.php';
                 <div class="card-body-modern">
                     <div class="mb-0">
                         <label class="form-label">Mô tả đặc điểm tiêu chuẩn của phân khúc (moTa)</label>
-                        <textarea name="moTa" rows="4" class="form-control" 
-                                  placeholder="Mô tả tiêu chuẩn của phân khúc laptop này (Ví dụ: CPU tối thiểu Core i7, màn hình 144Hz, card đồ họa rời RTX...)"></textarea>
+                        <textarea name="moTa" rows="4" class="form-control"
+                            placeholder="Mô tả tiêu chuẩn của phân khúc laptop này (Ví dụ: CPU tối thiểu Core i7, màn hình 144Hz, card đồ họa rời RTX...)"></textarea>
                     </div>
                 </div>
             </div>

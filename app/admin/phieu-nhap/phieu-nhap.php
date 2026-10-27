@@ -50,7 +50,7 @@ $sampleReceipts = [
 ];
 
 if (!empty($filterNCC)) {
-    $sampleReceipts = array_filter($sampleReceipts, function($r) use ($filterNCC) {
+    $sampleReceipts = array_filter($sampleReceipts, function ($r) use ($filterNCC) {
         return $r['maNCC'] === $filterNCC;
     });
 }
@@ -186,43 +186,43 @@ if (!empty($filterNCC)) {
                     </thead>
                     <tbody>
                         <?php foreach ($sampleReceipts as $pn): ?>
-                        <tr>
-                            <td><span class="badge bg-light text-dark border font-monospace fw-bold"><?= htmlspecialchars($pn['maPhieu']) ?></span></td>
-                            <td><small class="text-muted"><i class="bi bi-calendar3 me-1"></i><?= date('d/m/Y H:i', strtotime($pn['ngayNhap'])) ?></small></td>
-                            <td>
-                                <div class="fw-bold text-dark"><?= htmlspecialchars($pn['tenCongTy']) ?></div>
-                                <small class="text-primary font-monospace"><?= htmlspecialchars($pn['maNCC']) ?></small>
-                            </td>
-                            <td><span class="text-secondary"><i class="bi bi-person me-1"></i><?= htmlspecialchars($pn['nguoiNhap']) ?></span></td>
-                            <td>
-                                <?php if ($pn['soHoaDonNCC'] !== 'Chưa bổ sung'): ?>
-                                    <span class="font-monospace text-dark fw-semibold"><?= htmlspecialchars($pn['soHoaDonNCC']) ?></span>
-                                <?php else: ?>
-                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Chưa bổ sung</span>
-                                <?php endif; ?>
-                            </td>
-                            <td><span class="text-secondary"><?= number_format($pn['tongTienTraTruocNCC'], 0, ',', '.') ?> ₫</span></td>
-                            <td><span class="fw-bold text-danger"><?= number_format($pn['tongTienNhap'], 0, ',', '.') ?> ₫</span></td>
-                            <td>
-                                <?php if ($pn['trangThaiThanhToan'] === 'thanhtoan'): ?>
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle">Đã thanh toán</span>
-                                <?php else: ?>
-                                    <span class="badge bg-warning text-dark">Đặt cọc</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php if ($pn['trangThai'] === 'Đã nhập kho'): ?>
-                                    <span class="tz-badge tz-badge-success"><i class="bi bi-check2-circle"></i>Đã nhập kho</span>
-                                <?php else: ?>
-                                    <span class="tz-badge tz-badge-warning"><i class="bi bi-pencil-fill"></i>Bản Nháp</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-end">
-                                <a href="detail.php?id=<?= $pn['maPhieu'] ?>" class="btn btn-sm btn-outline-primary" title="Xem chi tiết & Serial">
-                                    <i class="bi bi-eye me-1"></i>Chi tiết
-                                </a>
-                            </td>
-                        </tr>
+                            <tr>
+                                <td><span class="badge bg-light text-dark border font-monospace fw-bold"><?= htmlspecialchars($pn['maPhieu']) ?></span></td>
+                                <td><small class="text-muted"><i class="bi bi-calendar3 me-1"></i><?= date('d/m/Y H:i', strtotime($pn['ngayNhap'])) ?></small></td>
+                                <td>
+                                    <div class="fw-bold text-dark"><?= htmlspecialchars($pn['tenCongTy']) ?></div>
+                                    <small class="text-primary font-monospace"><?= htmlspecialchars($pn['maNCC']) ?></small>
+                                </td>
+                                <td><span class="text-secondary"><i class="bi bi-person me-1"></i><?= htmlspecialchars($pn['nguoiNhap']) ?></span></td>
+                                <td>
+                                    <?php if ($pn['soHoaDonNCC'] !== 'Chưa bổ sung'): ?>
+                                        <span class="font-monospace text-dark fw-semibold"><?= htmlspecialchars($pn['soHoaDonNCC']) ?></span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Chưa bổ sung</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><span class="text-secondary"><?= number_format($pn['tongTienTraTruocNCC'], 0, ',', '.') ?> ₫</span></td>
+                                <td><span class="fw-bold text-danger"><?= number_format($pn['tongTienNhap'], 0, ',', '.') ?> ₫</span></td>
+                                <td>
+                                    <?php if ($pn['trangThaiThanhToan'] === 'thanhtoan'): ?>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Đã thanh toán</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning text-dark">Đặt cọc</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($pn['trangThai'] === 'Đã nhập kho'): ?>
+                                        <span class="tz-badge tz-badge-success"><i class="bi bi-check2-circle"></i>Đã nhập kho</span>
+                                    <?php else: ?>
+                                        <span class="tz-badge tz-badge-warning"><i class="bi bi-pencil-fill"></i>Bản Nháp</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-end">
+                                    <a href="detail.php?id=<?= $pn['maPhieu'] ?>" class="btn btn-sm btn-outline-primary" title="Xem chi tiết & Serial">
+                                        <i class="bi bi-eye me-1"></i>
+                                    </a>
+                                </td>
+                            </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
@@ -241,7 +241,7 @@ if (!empty($filterNCC)) {
                     </div>
                     <div class="modal-body p-4">
                         <p class="text-secondary small mb-3">Trích xuất biến động nhập kho, xuất bán và kiểm đếm tồn kho Serial theo thời gian thực:</p>
-                        
+
                         <div class="row g-2 mb-4 align-items-end bg-light p-3 rounded">
                             <div class="col-md-4">
                                 <label class="form-label small fw-semibold">Từ ngày</label>

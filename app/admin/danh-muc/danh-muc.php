@@ -113,94 +113,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <!-- Bảng Dữ Liệu Danh Mục (Thể hiện rõ quan hệ với KhuyenMai và SanPham) -->
         <div class="tz-card">
-            <!-- Header: Tiêu đề danh sách & Thống kê kết quả -->
-            <div class="tz-card-header d-flex flex-wrap align-items-center justify-content-between gap-3 py-3 px-4">
+            <!-- Header: Tiêu đề danh sách & Tổng số lượng danh mục -->
+            <div class="tz-card-header py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
                 <div class="d-flex align-items-center gap-2">
                     <h3 class="tz-card-title mb-0">
-                        <i class="bi bi-folder2-open text-primary"></i>Danh Sách Danh Mục Máy Tính
+                        <i class="bi bi-list-nested text-primary"></i>Danh Sách Danh Mục Máy Tính
                     </h3>
                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill font-monospace px-2.5 py-1">
-                        <?= $totalDMCount ?> danh mục
+                        <?= $totalDMCount ?? '0' ?> danh mục
                     </span>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="text-muted small d-none d-sm-inline">
-                        <i class="bi bi-shield-check text-success me-1"></i>Hệ thống TechZone
-                    </span>
+                    <a href="create.php" class="btn btn-sm btn-tz-primary">
+                        <i class="bi bi-plus-lg me-1"></i>Thêm danh mục
+                    </a>
                 </div>
             </div>
 
-            <!-- Thanh Lọc & Tìm Kiếm Chuẩn UI/UX Pro Max -->
+            <!-- Thanh Công Cụ Lọc & Tìm Kiếm Chuẩn UI/UX Pro Max -->
             <div class="p-3 border-bottom bg-light-subtle">
-                <?php
-                // Xử lý bộ lọc tìm kiếm
-                $search = trim($_GET['search'] ?? '');
-                $kmOption = $_GET['KM_option'] ?? '';
-                $trangThaiFilter = $_GET['trangthai'] ?? '';
-                $isFiltering = (!empty($search) || !empty($kmOption) || $trangThaiFilter !== '');
-                ?>
                 <form action="danh-muc.php" method="GET" class="row g-2 align-items-center">
-                    <!-- Ô tìm kiếm tên danh mục -->
-                    <div class="col-xl-5 col-lg-4 col-md-12">
+                    <div class="col-xl-4 col-lg-4 col-md-12">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0 text-muted ps-3">
                                 <i class="bi bi-search"></i>
                             </span>
-                            <input type="text" 
-                                   name="search" 
-                                   value="<?= htmlspecialchars($search) ?>" 
-                                   class="form-control border-start-0 ps-2" 
-                                   placeholder="Nhập tên hoặc mô tả danh mục...">
-                            <?php if (!empty($search)): ?>
-                                <a href="danh-muc.php" class="input-group-text bg-white border-start-0 pe-3 text-muted text-decoration-none" title="Xóa từ khóa">
-                                    <i class="bi bi-x-circle-fill"></i>
-                                </a>
-                            <?php endif; ?>
+                            <input type="text" name="search" value="<?= htmlspecialchars($_GET['search'] ?? '') ?>" class="form-control border-start-0 ps-2" placeholder="Nhập tên danh mục để tìm kiếm...">
                         </div>
                     </div>
 
-                    <!-- Lọc Khuyến Mãi -->
                     <div class="col-xl-3 col-lg-3 col-md-5 col-sm-6">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0 text-muted ps-2.5">
                                 <i class="bi bi-tag text-warning"></i>
                             </span>
                             <select name="KM_option" class="form-select border-start-0 ps-2">
-                                <option value="">Tất cả khuyến mãi</option>
-                                <option value="da_ap" <?= ($kmOption === 'da_ap') ? 'selected' : '' ?>>Đã áp dụng KM</option>
-                                <option value="chua_ap" <?= ($kmOption === 'chua_ap') ? 'selected' : '' ?>>Chưa áp dụng KM</option>
+                                <option value="">Áp Dụng KM (Tất cả)</option>
+                                <option value="da_ap" <?= ($_GET['KM_option'] ?? '') === 'da_ap' ? 'selected' : '' ?>>Đã Áp Dụng</option>
+                                <option value="chua_ap" <?= ($_GET['KM_option'] ?? '') === 'chua_ap' ? 'selected' : '' ?>>Chưa Áp Dụng</option>
                             </select>
                         </div>
                     </div>
 
-                    <!-- Lọc Trạng Thái -->
-                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                    <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0 text-muted ps-2.5">
                                 <i class="bi bi-toggle-on text-info"></i>
                             </span>
                             <select name="trangthai" class="form-select border-start-0 ps-2">
-                                <option value="">Tất cả trạng thái</option>
-                                <option value="1" <?= ($trangThaiFilter === '1') ? 'selected' : '' ?>>Hiển thị</option>
-                                <option value="0" <?= ($trangThaiFilter === '0') ? 'selected' : '' ?>>Tạm ẩn</option>
+                                <option value="">Trạng Thái (Tất cả)</option>
+                                <option value="1" <?= ($_GET['trangthai'] ?? '') === '1' ? 'selected' : '' ?>>Hiển Thị</option>
+                                <option value="0" <?= ($_GET['trangthai'] ?? '') === '0' ? 'selected' : '' ?>>Ẩn</option>
                             </select>
                         </div>
                     </div>
 
-                    <!-- Nút Thao Tác Tìm & Đặt lại -->
-                    <div class="col-xl-2 col-lg-2 col-md-3 col-sm-12 d-flex gap-2">
-                        <button type="submit" class="btn btn-tz-primary flex-fill d-inline-flex align-items-center justify-content-center">
-                            <i class="bi bi-funnel-fill me-1.5"></i>Lọc
-                        </button>
-                        <?php if ($isFiltering): ?>
-                            <a href="danh-muc.php" class="btn btn-light border text-secondary px-2.5 d-inline-flex align-items-center" title="Đặt lại bộ lọc">
+                    <div class="col-xl-2 col-lg-2 col-md-3 col-sm-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-tz-primary flex-fill d-inline-flex align-items-center justify-content-center" title="Lọc dữ liệu">
+                                <i class="bi bi-funnel-fill me-1"></i>Lọc
+                            </button>
+                            <a href="danh-muc.php" class="btn btn-light border text-secondary d-inline-flex align-items-center justify-content-center px-2.5" title="Đặt lại bộ lọc">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </a>
-                        <?php endif; ?>
+                        </div>
                     </div>
                 </form>
             </div>
-
             <div class="table-responsive">
                 <table class="tz-table">
                     <thead>
@@ -217,27 +196,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </thead>
                     <tbody>
                         <?php
+
                         if ($conn->connect_error) {
                             die("connect fail: " . $conn->connect_error);
                         }
 
-                        // Xây dựng câu truy vấn có điều kiện lọc
-                        $where = ["1=1"];
+                        $search = $_GET['search'] ?? '';
+                        $KM_option = $_GET['KM_option'] ?? '';
+                        $trangthai = $_GET['trangthai'] ?? '';
+
+                        $sql = "SELECT * FROM danhmuc WHERE 1=1";
                         if (!empty($search)) {
-                            $searchSafe = $conn->real_escape_string($search);
-                            $where[] = "(tenDM LIKE '%$searchSafe%' OR moTa LIKE '%$searchSafe%')";
-                        }
-                        if ($kmOption === 'da_ap') {
-                            $where[] = "(maKM IS NOT NULL AND maKM != '')";
-                        } elseif ($kmOption === 'chua_ap') {
-                            $where[] = "(maKM IS NULL OR maKM = '')";
-                        }
-                        if ($trangThaiFilter !== '') {
-                            $ttSafe = intval($trangThaiFilter);
-                            $where[] = "trangThai = $ttSafe";
+                            $sql .= " AND tenDM LIKE '%$search%'";
                         }
 
-                        $sql = "SELECT * FROM danhmuc WHERE " . implode(" AND ", $where) . " ORDER BY maDM ASC";
+                        if (!empty($KM_option)) {
+                            if ($KM_option === 'da_ap') {
+                                $sql .= " AND maKM IS NOT NULL AND maKM != ''";
+                            } elseif ($KM_option === 'chua_ap') {
+                                $sql .= " AND (maKM IS NULL OR maKM = '')";
+                            }
+                        }
+
+                        if (!empty($trangthai)) {
+                            $sql .= " AND trangThai = $trangthai";
+                        }
+
                         $resultSql = $conn->query($sql);
                         if ($resultSql->num_rows > 0) {
                             while ($row = $resultSql->fetch_assoc()) {
@@ -322,21 +306,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </td>
                                 </tr>
 
-                        <?php
+                            <?php
                             }
                         } else {
-                        ?>
+                            ?>
                             <tr>
                                 <td colspan="8" class="text-center py-5">
-                                    <div class="d-flex flex-column align-items-center justify-content-center py-3">
-                                        <div class="tz-modal-badge tz-badge-warning mb-3">
-                                            <i class="bi bi-search"></i>
+                                    <div class="d-flex flex-column align-items-center justify-content-center py-4">
+                                        <div class="tz-modal-badge tz-badge-warning mb-3" style="width: 64px; height: 64px; font-size: 28px;">
+                                            <i class="bi bi-folder-x"></i>
                                         </div>
                                         <h5 class="fw-bold text-dark mb-1">Không tìm thấy danh mục nào</h5>
-                                        <p class="text-muted small mb-3">Không có danh mục nào khớp với điều kiện tìm kiếm hiện tại.</p>
-                                        <a href="danh-muc.php" class="btn btn-sm btn-outline-primary px-3 rounded-pill">
-                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại bộ lọc
-                                        </a>
+                                        <p class="text-muted small mb-3">Hiện chưa có danh mục máy nào trong hệ thống hoặc không khớp với bộ lọc tìm kiếm.</p>
+                                        <div class="d-flex gap-2">
+                                            <a href="danh-muc.php" class="btn btn-sm btn-outline-primary px-3 rounded-pill">
+                                                <i class="bi bi-arrow-counterclockwise me-1"></i>Tải lại danh sách
+                                            </a>
+                                            <a href="create.php" class="btn btn-sm btn-tz-primary px-3 rounded-pill">
+                                                <i class="bi bi-plus-lg me-1"></i>Thêm danh mục mới
+                                            </a>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
