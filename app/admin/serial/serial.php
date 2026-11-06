@@ -2,19 +2,6 @@
 // app/admin/serial/serial.php
 $pageTitle = "Quản lý Serial / IMEI Laptop";
 
-$successMsg = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
-    if ($action === 'create') {
-        $maSerial = htmlspecialchars($_POST['maSerial_IMEI'] ?? '');
-        $successMsg = "Đã thêm mới số Serial/IMEI thành công: <strong>$maSerial</strong>";
-    } elseif ($action === 'update') {
-        $maSerial = htmlspecialchars($_POST['maSerial_IMEI'] ?? '');
-        $trangThai = htmlspecialchars($_POST['trangThai'] ?? '');
-        $successMsg = "Đã cập nhật trạng thái Serial <strong>$maSerial</strong> sang: <strong>$trangThai</strong>";
-    }
-}
-
 require_once dirname(__DIR__) . '/layouts/header.php';
 require_once dirname(__DIR__) . '/layouts/sidebar.php';
 ?>
@@ -138,6 +125,7 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                     <thead>
                         <tr>
                             <th>MÃ SERIAL / IMEI</th>
+                            <th>MÃ Sản Phẩm</th>
                             <th>MODEL SẢN PHẨM</th>
                             <th>PHIẾU NHẬP</th>
                             <th>ĐƠN HÀNG XUẤT</th>
@@ -150,6 +138,7 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                     <tbody>
                         <tr>
                             <td><span class="fw-bold font-monospace text-primary">DELL-XPS-9320-001</span></td>
+                            <td><span class="fw-bold font-monospace text-primary">SP01</span></td>
                             <td>
                                 <div class="fw-semibold">Dell XPS 13 Plus 9320</div>
                                 <small class="text-muted">SKU: SP01</small>

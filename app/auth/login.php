@@ -1,26 +1,182 @@
 <?php
+session_start();
 /**
- * ==============================================================================
  * HỆ THỐNG: QUẢN LÝ CỬA HÀNG BÁN LAPTOP (TECHZONE)
- * FILE: app/views/auth/login.php
- * MÔ TẢ: Giao diện ĐĂNG NHẬP / ĐĂNG KÝ DÙNG CHUNG cho cả Khách hàng & Quản trị viên
- * LƯU Ý: Giao diện thuần (HTML/CSS/JS) - Không logic, không session
- * ==============================================================================
+ * FILE: app/auth/login.php
  */
 
+// 1. Cấu hình 
 if (!defined('APP_NAME')) {
     define('APP_NAME', 'TECHZONE - Quản Trị & Mua Sắm Laptop');
 }
 if (!defined('BASE_URL')) {
     define('BASE_URL', 'http://localhost/computer-shop/public');
 }
+
+// 2. Kết nối Database
+if (!isset($conn) || !($conn instanceof mysqli)) {
+    if (file_exists(dirname(__DIR__) . '/config/database.php')) {
+        include dirname(__DIR__) . '/config/database.php';
+    }
+    // Đảm bảo các biến $servername, $username, $password, $dbname đã có trong file database.php
+    $conn = new mysqli($servername ?? 'localhost', $username ?? 'root', $password ?? '', $dbname ?? 'techzone_db');
+    if ($conn->connect_error) {
+        die("Lỗi kết nối cơ sở dữ liệu: " . $conn->connect_error);
+    }
+}
+
+// 3. Khởi tạo biến trạng thái
+$login_error = '';
+$register_error = '';
+$register_success = '';
+$active_tab = (isset($_GET['mode']) && $_GET['mode'] === 'register') ? 'register' : 'login';
+
+// 4. Xử lý khi Submit Form
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? 'login';
+
+    // A. XỬ LÝ ĐĂNG NHẬP
+    if ($action === 'login') {
+        $active_tab = 'login';
+        $user_input = trim($_POST['username'] ?? '');
+        $pass_input = trim($_POST['password'] ?? '');
+
+        if (empty($user_input) || empty($pass_input)) {
+            $login_error = 'Vui lòng nhập tên tài khoản / email và mật khẩu!';
+        } else {
+            $userEsc = $conn->real_escape_string($user_input);
+            $sql = "SELECT * FROM accounts WHERE (tenTaiKhoan = '$userEsc' OR email = '$userEsc') LIMIT 1";
+            $res = $conn->query($sql);
+
+            if ($res && $res->num_rows > 0) {
+                $acc = $res->fetch_assoc();
+                $status = strtolower(trim($acc['trangThai'] ?? 'active'));
+
+                if ($status !== 'active' && $status !== '1') {
+                    $login_error = 'Tài khoản của bạn hiện đang bị khóa hoặc ngừng hoạt động!';
+                } else {
+                    $passHash = md5($pass_input);
+                    // Kiểm tra mật khẩu
+                    if ($acc['matKhau'] === $passHash || $acc['matKhau'] === $pass_input) {
+
+                        $role = strtolower(trim($acc['role'] ?? 'user'));
+
+                        // FIX 2: Lưu đầy đủ Session để các trang sau dùng
+                        $_SESSION['login'] = true;
+                        $_SESSION['maTk'] = $acc['maTk'];
+                        $_SESSION['user_name'] = $acc['hoTen'] ?? $user_input;
+                        $_SESSION['role'] = $role;
+
+                        // FIX 1: Dùng header() để chuyển trang thay vì javascript
+                        if ($role === 'user') {
+                            $maTk = $acc['maTk'];
+                            $sqlKH = "SELECT maKH FROM khachhang WHERE maTk = '$maTk' LIMIT 1";
+                            $resKH = $conn->query($sqlKH);
+                            $maKH = 'KH001';
+                            if ($resKH && $resKH->num_rows > 0) {
+                                $rowKH = $resKH->fetch_assoc();
+                                $maKH = $rowKH['maKH'];
+                            }
+
+                            header("Location: /computer-shop/public/client/index.php?kh=" . urlencode($maKH));
+                            exit();
+                        } else {
+                            // Chuyển hướng Admin
+                            header("Location: /computer-shop/app/admin/dashboard/dashboard.php");
+                            exit();
+                        }
+                    } else {
+                        $login_error = 'Mật khẩu truy cập không chính xác!';
+                    }
+                }
+            } else {
+                $login_error = 'Tên tài khoản hoặc email không tồn tại trên hệ thống!';
+            }
+        }
+    }
+
+    // B. XỬ LÝ ĐĂNG KÝ
+    if ($action === 'register') {
+        $active_tab = 'register';
+        $fullname = trim($_POST['fullname'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $regUser = trim($_POST['username'] ?? '');
+        $regPass = trim($_POST['password'] ?? '');
+        $confirmPass = trim($_POST['confirm_password'] ?? '');
+
+        if (empty($fullname) || empty($email) || empty($regUser) || empty($regPass) || empty($confirmPass)) {
+            $register_error = 'Vui lòng điền đầy đủ tất cả các trường thông tin!';
+        } elseif ($regPass !== $confirmPass) {
+            $register_error = 'Mật khẩu xác nhận không khớp, vui lòng kiểm tra lại!';
+        } elseif (strlen($regPass) < 6) {
+            $register_error = 'Mật khẩu phải chứa ít nhất 6 ký tự!';
+        } else {
+            $escFullname = $conn->real_escape_string($fullname);
+            $escEmail = $conn->real_escape_string($email);
+            $escUser = $conn->real_escape_string($regUser);
+
+            $chkSql = "SELECT maTk FROM accounts WHERE tenTaiKhoan = '$escUser' OR email = '$escEmail' LIMIT 1";
+            $chkRes = $conn->query($chkSql);
+
+            if ($chkRes && $chkRes->num_rows > 0) {
+                $register_error = 'Tên tài khoản hoặc email đã được sử dụng!';
+            } else {
+                // Sinh mã TK tự động
+                $resMaxTk = $conn->query("SELECT maTk FROM accounts WHERE maTk LIKE 'TK%' ORDER BY LENGTH(maTk) DESC, maTk DESC LIMIT 1");
+                $newMaTk = 'TK001';
+                if ($resMaxTk && $resMaxTk->num_rows > 0) {
+                    $rowMax = $resMaxTk->fetch_assoc();
+                    if (preg_match('/^TK(\d+)$/', $rowMax['maTk'], $matches)) {
+                        $num = intval($matches[1]) + 1;
+                        $newMaTk = 'TK' . str_pad($num, 3, '0', STR_PAD_LEFT);
+                    }
+                }
+
+                $passMd5 = md5($regPass);
+                $sqlInsert = "INSERT INTO accounts (maTk, hoTen, email, tenTaiKhoan, matKhau, ngayTao, role, trangThai) 
+                              VALUES ('$newMaTk', '$escFullname', '$escEmail', '$escUser', '$passMd5', NOW(), 'user', 'active')";
+
+                if ($conn->query($sqlInsert)) {
+                    // Kiểm tra và insert bảng khachhang
+                    $checkKhTable = $conn->query("SHOW TABLES LIKE 'khachhang'");
+                    if ($checkKhTable && $checkKhTable->num_rows > 0) {
+                        $resMaxKh = $conn->query("SELECT maKH FROM khachhang WHERE maKH LIKE 'KH%' ORDER BY LENGTH(maKH) DESC, maKH DESC LIMIT 1");
+                        $newMaKh = 'KH001';
+                        if ($resMaxKh && $resMaxKh->num_rows > 0) {
+                            $rowKh = $resMaxKh->fetch_assoc();
+                            if (preg_match('/^KH(\d+)$/', $rowKh['maKH'], $mKh)) {
+                                $numKh = intval($mKh[1]) + 1;
+                                $newMaKh = 'KH' . str_pad($numKh, 3, '0', STR_PAD_LEFT);
+                            }
+                        }
+                        $conn->query("INSERT INTO khachhang (maKH, maTk, hoVaTen, email, doiTuongUuTien) 
+                                      VALUES ('$newMaKh', '$newMaTk', '$escFullname', '$escEmail', 0)");
+                    }
+
+                    // Tự động đăng nhập luôn sau khi đăng ký thành công (Nâng cao trải nghiệm)
+                    $_SESSION['login'] = true;
+                    $_SESSION['maTk'] = $newMaTk;
+                    $_SESSION['user_name'] = $fullname;
+                    $_SESSION['role'] = 'user';
+
+                    // FIX 1: Dùng header() thay cho JS
+                    header("Location: /computer-shop/app/client/home/index.php");
+                    exit();
+                } else {
+                    $register_error = 'Lỗi tạo tài khoản: ' . $conn->error;
+                }
+            }
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng Nhập Hệ Thống | <?= APP_NAME ?></title>
+    <title>Đăng Nhập & Đăng Ký Hệ Thống | <?= htmlspecialchars(APP_NAME) ?></title>
 
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,101 +189,157 @@ if (!defined('BASE_URL')) {
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-    <!-- CSS Giao diện đăng nhập dùng chung -->
-    <link rel="stylesheet" href="<?= BASE_URL ?>/css/login.css">
-    <!-- TechZone Global Notify & Confirm CSS -->
-    <link rel="stylesheet" href="<?= BASE_URL ?>/css/techzone-notify.css">
+    <!-- CSS Giao diện đăng nhập dùng chung (Đường dẫn tuyệt đối - Không Shadow) -->
+    <link rel="stylesheet" href="/computer-shop/public/css/login.css?v=<?= time() ?>">
 </head>
 
 <body>
+
     <div class="login-wrapper">
-        <!-- CỘT TRÁI: FORM ĐĂNG NHẬP / ĐĂNG KÝ CHUNG -->
+        <!-- CỘT TRÁI: FORM ĐĂNG NHẬP / ĐĂNG KÝ DUY NHẤT -->
         <div class="login-left">
             <div class="login-box">
-                
+
                 <!-- 1. Header Đăng Nhập -->
                 <header class="login-header">
                     <div class="icon-login">
-                        <img class="admin-logo_login" alt="TechZone Logo" src="<?= BASE_URL ?>/img/login/logoHunre.jpg" />
-                        <h1 class="logo-text" id="brandTitle">TECHZONE</h1>
+                        <img class="admin-logo_login" alt="TechZone Logo" src="/computer-shop/public/img/login/logoHunre.jpg" />
+                        <h1 class="logo-text">TECHZONE</h1>
                     </div>
-                    <p class="subtitle" id="formSubtitle">Hệ Thống Quản Lý Cửa Hàng & Mua Sắm Laptop</p>
+                    <p class="subtitle">Hệ Thống Quản Lý Cửa Hàng & Mua Sắm Laptop</p>
                 </header>
 
-                <!-- 2. Tab Chuyển Đổi Vai Trò: Khách Hàng (User) vs Quản Trị Viên (Admin) -->
-                <div class="role-tab-container">
-                    <button type="button" class="role-tab-btn active" id="btnRoleUser">
-                        <i class="bi bi-person-heart"></i>
-                        <span>Khách Hàng</span>
-                    </button>
-                    <button type="button" class="role-tab-btn" id="btnRoleAdmin">
-                        <i class="bi bi-shield-lock"></i>
-                        <span>Quản Trị Viên</span>
-                    </button>
+                <!-- 2. Form ĐĂNG NHẬP -->
+                <div id="loginFormContainer" style="<?= $active_tab === 'login' ? 'display: block;' : 'display: none;' ?>">
+                    <?php if (!empty($login_error)): ?>
+                        <div class="login-alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span><?= htmlspecialchars($login_error) ?></span>
+                        </div>
+                    <?php endif; ?>
+
+                    <form class="login-form" method="POST" action="">
+                        <input type="hidden" name="action" value="login">
+
+                        <!-- Tài khoản hoặc Email -->
+                        <div class="form-group-custom">
+                            <label class="form-label-custom">Tên đăng nhập hoặc Email <span class="text-danger">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-person input-icon-left"></i>
+                                <input type="text" name="username" placeholder="Nhập tên đăng nhập hoặc email..." value="<?= htmlspecialchars($_POST['username'] ?? '') ?>" required autocomplete="username" />
+                            </div>
+                        </div>
+
+                        <!-- Mật khẩu -->
+                        <div class="form-group-custom">
+                            <label class="form-label-custom">Mật khẩu truy cập <span class="text-danger">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-shield-lock input-icon-left"></i>
+                                <input type="password" id="loginPasswordInput" name="password" placeholder="Nhập mật khẩu..." required autocomplete="current-password" />
+                                <button type="button" class="toggle-password-btn" data-target="loginPasswordInput" title="Hiện/ẩn mật khẩu">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tùy Chọn Ghi Nhớ & Quên Mật Khẩu -->
+                        <div class="login-options">
+                            <label class="remember-me">
+                                <input type="checkbox" name="remember" />
+                                <span>Ghi nhớ đăng nhập</span>
+                            </label>
+                            <a href="#" class="forgot-password-link" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">Quên Mật Khẩu?</a>
+                        </div>
+
+                        <!-- Nút Bấm Đăng Nhập -->
+                        <button type="submit" class="login-btn">
+                            <i class="bi bi-box-arrow-in-right"></i>
+                            <span>Đăng Nhập</span>
+                        </button>
+                    </form>
+
+                    <!-- Chuyển sang Đăng ký -->
+                    <div class="auth-switch-box">
+                        <span>Chưa có tài khoản TechZone?</span>
+                        <a href="?mode=register" onclick="showRegister(event)" class="auth-switch-link" id="linkToRegister">Đăng ký thành viên ngay</a>
+                    </div>
                 </div>
 
-                <!-- 3. Form Đăng Nhập / Đăng Ký -->
-                <form class="login-form" id="mainAuthForm" method="POST" action="#">
-                    
-                    <!-- Trường Họ và Tên (Chỉ hiển thị khi ở chế độ Đăng Ký) -->
-                    <div class="form-group-custom" id="fullNameGroup" style="display: none;">
-                        <label class="form-label-custom">Họ và tên <span class="text-danger">*</span></label>
-                        <div class="input-icon-wrapper">
-                            <i class="bi bi-card-heading input-icon-left"></i>
-                            <input type="text" id="fullNameInput" name="fullname" placeholder="Nhập họ và tên đầy đủ..." autocomplete="name" />
+                <!-- 4. Form ĐĂNG KÝ -->
+                <div id="registerFormContainer" style="<?= $active_tab === 'register' ? 'display: block;' : 'display: none;' ?>">
+                    <?php if (!empty($register_error)): ?>
+                        <div class="login-alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span><?= htmlspecialchars($register_error) ?></span>
                         </div>
-                    </div>
+                    <?php endif; ?>
 
-                    <!-- Trường Tên Đăng Nhập / Email / Số điện thoại -->
-                    <div class="form-group-custom">
-                        <label class="form-label-custom" id="accountLabel">Email hoặc Số điện thoại <span class="text-danger">*</span></label>
-                        <div class="input-icon-wrapper">
-                            <i class="bi bi-person input-icon-left"></i>
-                            <input type="text" id="accountInput" name="username" placeholder="Nhập email hoặc số điện thoại..." required autocomplete="username" />
+                    <form class="login-form" method="POST" action="">
+                        <input type="hidden" name="action" value="register">
+
+                        <!-- Họ và Tên -->
+                        <div class="form-group-custom">
+                            <label class="form-label-custom">Họ và tên <span class="text-danger">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-card-heading input-icon-left"></i>
+                                <input type="text" name="fullname" placeholder="Nhập họ và tên đầy đủ..." value="<?= htmlspecialchars($_POST['fullname'] ?? '') ?>" required autocomplete="name" />
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Trường Mật Khẩu -->
-                    <div class="form-group-custom">
-                        <label class="form-label-custom">Mật khẩu truy cập <span class="text-danger">*</span></label>
-                        <div class="input-icon-wrapper">
-                            <i class="bi bi-shield-lock input-icon-left"></i>
-                            <input type="password" id="passwordInput" name="password" placeholder="Nhập mật khẩu..." required autocomplete="current-password" />
-                            <button type="button" class="toggle-password-btn" id="togglePasswordBtn" title="Hiện mật khẩu">
-                                <i class="bi bi-eye" id="togglePasswordIcon"></i>
-                            </button>
+                        <!-- Email -->
+                        <div class="form-group-custom">
+                            <label class="form-label-custom">Địa chỉ Email <span class="text-danger">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-envelope input-icon-left"></i>
+                                <input type="email" name="email" placeholder="Nhập địa chỉ email..." value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required autocomplete="email" />
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Trường Xác Nhận Mật Khẩu (Chỉ hiển thị khi Đăng Ký) -->
-                    <div class="form-group-custom" id="confirmPasswordGroup" style="display: none;">
-                        <label class="form-label-custom">Xác nhận mật khẩu <span class="text-danger">*</span></label>
-                        <div class="input-icon-wrapper">
-                            <i class="bi bi-check2-circle input-icon-left"></i>
-                            <input type="password" id="confirmPasswordInput" name="confirm_password" placeholder="Nhập lại mật khẩu..." autocomplete="new-password" />
+                        <!-- Tên Tài Khoản -->
+                        <div class="form-group-custom">
+                            <label class="form-label-custom">Tên tài khoản (Username) <span class="text-danger">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-person input-icon-left"></i>
+                                <input type="text" name="username" placeholder="Nhập tên tài khoản mong muốn..." value="<?= htmlspecialchars($_POST['username'] ?? '') ?>" required autocomplete="username" />
+                            </div>
                         </div>
+
+                        <!-- Mật Khẩu -->
+                        <div class="form-group-custom">
+                            <label class="form-label-custom">Mật khẩu truy cập <span class="text-danger">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-shield-lock input-icon-left"></i>
+                                <input type="password" id="regPasswordInput" name="password" placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)..." required autocomplete="new-password" />
+                                <button type="button" class="toggle-password-btn" data-target="regPasswordInput" title="Hiện/ẩn mật khẩu">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Xác Nhận Mật Khẩu -->
+                        <div class="form-group-custom">
+                            <label class="form-label-custom">Xác nhận mật khẩu <span class="text-danger">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-check2-circle input-icon-left"></i>
+                                <input type="password" id="regConfirmPasswordInput" name="confirm_password" placeholder="Nhập lại mật khẩu vừa nhập..." required autocomplete="new-password" />
+                                <button type="button" class="toggle-password-btn" data-target="regConfirmPasswordInput" title="Hiện/ẩn mật khẩu">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Nút Bấm Đăng Ký -->
+                        <button type="submit" class="login-btn">
+                            <i class="bi bi-person-plus"></i>
+                            <span>Tạo Tài Khoản</span>
+                        </button>
+                    </form>
+
+                    <!-- Chuyển sang Đăng nhập -->
+                    <div class="auth-switch-box">
+                        <span>Đã có tài khoản TechZone?</span>
+                        <a href="?mode=login" onclick="showLogin(event)" class="auth-switch-link" id="linkToLogin">Đăng nhập ngay</a>
                     </div>
-
-                    <!-- Tùy Chọn Ghi Nhớ & Quên Mật Khẩu -->
-                    <div class="login-options" id="loginOptionsArea">
-                        <label class="remember-me">
-                            <input type="checkbox" name="remember" />
-                            <span>Ghi nhớ đăng nhập</span>
-                        </label>
-                        <a href="#" class="forgot-password-link" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">Quên Mật Khẩu?</a>
-                    </div>
-
-                    <!-- Nút Bấm Thực Hiện (Submit) -->
-                    <button type="submit" class="login-btn" id="submitActionBtn">
-                        <i class="bi bi-box-arrow-in-right" id="submitIcon"></i>
-                        <span id="submitText">Đăng Nhập Khách Hàng</span>
-                    </button>
-                </form>
-
-                <!-- 4. Chuyển Đổi Nhanh Giữa Đăng Nhập & Đăng Ký (Dành cho Khách Hàng) -->
-                <div class="auth-switch-box" id="authSwitchArea">
-                    <span id="switchPromptText">Chưa có tài khoản TechZone?</span>
-                    <a href="javascript:void(0)" class="auth-switch-link" id="authToggleLink">Đăng ký thành viên ngay</a>
                 </div>
 
                 <!-- 5. Footer Chân Trang -->
@@ -137,20 +349,20 @@ if (!defined('BASE_URL')) {
             </div>
         </div>
 
-        <!-- CỘT PHẢI: MOCKUP & GIỚI THIỆU HỆ THỐNG TECHZONE -->
+        <!-- CỘT PHẢI: MOCKUP & GIỚI THIỆU HỆ THỐNG (KHÔNG SHADOW) -->
         <div class="login-right">
             <div class="right-content">
-                <!-- Logo Chữ TechZone -->
-                <a href="<?= BASE_URL ?>" class="d-inline-block">
-                    <img alt="Brand Logo" src="<?= BASE_URL ?>/img/login/Textlogo.png" class="right-brand-logo" />
+                <!-- Logo Chữ TechZone (Đường dẫn tuyệt đối) -->
+                <a href="/computer-shop/public/index.php" class="d-inline-block">
+                    <img alt="Brand Logo" src="/computer-shop/public/img/login/Textlogo.png" class="right-brand-logo" />
                 </a>
 
-                <!-- Hình ảnh Mockup Dashboard Laptop -->
+                <!-- Hình ảnh Mockup Dashboard Laptop (Đường dẫn tuyệt đối - Không Shadow) -->
                 <div class="mockup-area">
-                    <img src="<?= BASE_URL ?>/img/login/imgright.png" alt="Laptop Shop Dashboard Mockup" />
+                    <img src="/computer-shop/public/img/login/imgright.png" alt="Laptop Shop Dashboard Mockup" />
                 </div>
 
-                <!-- Tiêu đề giới thiệu chuẩn mẫu -->
+                <!-- Tiêu đề giới thiệu -->
                 <h2>Fast, Efficient and Productive</h2>
                 <p>
                     Giải pháp quản lý kho laptop thông minh, theo dõi Serial/IMEI, xuất hóa đơn tài chính và mua sắm máy tính chính hãng thế hệ mới.
@@ -189,110 +401,57 @@ if (!defined('BASE_URL')) {
     <!-- Bootstrap 5.3 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- SCRIPT TƯƠNG TÁC GIAO DIỆN (100% THUẦN UI) -->
+    <!-- SCRIPT CHUYỂN TAB ĐĂNG NHẬP / ĐĂNG KÝ & HIỆN MẬT KHẨU -->
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // 1. Trạng thái giao diện
-            let currentRole = 'user'; // 'user' hoặc 'admin'
-            let isRegisterMode = false; // false = Đăng nhập, true = Đăng ký
+        function showLogin(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            const tabLoginBtn = document.getElementById('tabLoginBtn');
+            const tabRegisterBtn = document.getElementById('tabRegisterBtn');
+            const loginFormContainer = document.getElementById('loginFormContainer');
+            const registerFormContainer = document.getElementById('registerFormContainer');
 
-            const btnRoleUser = document.getElementById('btnRoleUser');
-            const btnRoleAdmin = document.getElementById('btnRoleAdmin');
-            const accountLabel = document.getElementById('accountLabel');
-            const accountInput = document.getElementById('accountInput');
-            const submitText = document.getElementById('submitText');
-            const submitIcon = document.getElementById('submitIcon');
-            const authSwitchArea = document.getElementById('authSwitchArea');
-            const switchPromptText = document.getElementById('switchPromptText');
-            const authToggleLink = document.getElementById('authToggleLink');
-            const fullNameGroup = document.getElementById('fullNameGroup');
-            const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
-            const loginOptionsArea = document.getElementById('loginOptionsArea');
-            const brandTitle = document.getElementById('brandTitle');
+            if (tabLoginBtn) tabLoginBtn.classList.add('active');
+            if (tabRegisterBtn) tabRegisterBtn.classList.remove('active');
+            if (loginFormContainer) loginFormContainer.style.display = 'block';
+            if (registerFormContainer) registerFormContainer.style.display = 'none';
+        }
 
-            // 2. Chuyển sang vai trò Khách Hàng
-            btnRoleUser.addEventListener('click', function () {
-                currentRole = 'user';
-                btnRoleUser.classList.add('active');
-                btnRoleAdmin.classList.remove('active');
-                brandTitle.textContent = 'TECHZONE';
-                authSwitchArea.style.display = 'block';
-                updateFormUI();
-            });
+        function showRegister(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            const tabLoginBtn = document.getElementById('tabLoginBtn');
+            const tabRegisterBtn = document.getElementById('tabRegisterBtn');
+            const loginFormContainer = document.getElementById('loginFormContainer');
+            const registerFormContainer = document.getElementById('registerFormContainer');
 
-            // 3. Chuyển sang vai trò Quản Trị Viên
-            btnRoleAdmin.addEventListener('click', function () {
-                currentRole = 'admin';
-                btnRoleAdmin.classList.add('active');
-                btnRoleUser.classList.remove('active');
-                brandTitle.textContent = 'ADMIN';
-                isRegisterMode = false; // Quản trị viên không có đăng ký tự do
-                authSwitchArea.style.display = 'none';
-                updateFormUI();
-            });
+            if (tabRegisterBtn) tabRegisterBtn.classList.add('active');
+            if (tabLoginBtn) tabLoginBtn.classList.remove('active');
+            if (loginFormContainer) loginFormContainer.style.display = 'none';
+            if (registerFormContainer) registerFormContainer.style.display = 'block';
+        }
 
-            // 4. Chuyển qua lại giữa Đăng Nhập và Đăng Ký (Khách hàng)
-            authToggleLink.addEventListener('click', function () {
-                isRegisterMode = !isRegisterMode;
-                updateFormUI();
-            });
+        window.showLogin = showLogin;
+        window.showRegister = showRegister;
 
-            // 5. Cập nhật nhãn và trường nhập dựa theo trạng thái
-            function updateFormUI() {
-                if (currentRole === 'admin') {
-                    // Chế độ Admin
-                    accountLabel.innerHTML = 'Tài khoản quản trị <span class="text-danger">*</span>';
-                    accountInput.placeholder = 'Nhập tên đăng nhập hoặc email quản trị...';
-                    fullNameGroup.style.display = 'none';
-                    confirmPasswordGroup.style.display = 'none';
-                    loginOptionsArea.style.display = 'flex';
-                    submitText.textContent = 'Đăng Nhập Quản Trị';
-                    submitIcon.className = 'bi bi-shield-check';
-                } else {
-                    // Chế độ Khách hàng
-                    if (isRegisterMode) {
-                        // Khách hàng -> Đăng ký
-                        accountLabel.innerHTML = 'Email / Số điện thoại đăng ký <span class="text-danger">*</span>';
-                        accountInput.placeholder = 'Nhập email hoặc số điện thoại...';
-                        fullNameGroup.style.display = 'block';
-                        confirmPasswordGroup.style.display = 'block';
-                        loginOptionsArea.style.display = 'none';
-                        submitText.textContent = 'Tạo Tài Khoản Khách Hàng';
-                        submitIcon.className = 'bi bi-person-plus';
-                        switchPromptText.textContent = 'Đã có tài khoản?';
-                        authToggleLink.textContent = 'Đăng nhập ngay';
-                    } else {
-                        // Khách hàng -> Đăng nhập
-                        accountLabel.innerHTML = 'Email hoặc Số điện thoại <span class="text-danger">*</span>';
-                        accountInput.placeholder = 'Nhập email hoặc số điện thoại mua hàng...';
-                        fullNameGroup.style.display = 'none';
-                        confirmPasswordGroup.style.display = 'none';
-                        loginOptionsArea.style.display = 'flex';
-                        submitText.textContent = 'Đăng Nhập Khách Hàng';
-                        submitIcon.className = 'bi bi-box-arrow-in-right';
-                        switchPromptText.textContent = 'Chưa có tài khoản TechZone?';
-                        authToggleLink.textContent = 'Đăng ký thành viên ngay';
+        document.addEventListener('DOMContentLoaded', function() {
+            // Nút Toggle Hiện / Ẩn Mật khẩu
+            document.querySelectorAll('.toggle-password-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    const targetInput = document.getElementById(targetId);
+                    const icon = this.querySelector('i');
+                    if (targetInput) {
+                        if (targetInput.type === 'password') {
+                            targetInput.type = 'text';
+                            icon.classList.replace('bi-eye', 'bi-eye-slash');
+                        } else {
+                            targetInput.type = 'password';
+                            icon.classList.replace('bi-eye-slash', 'bi-eye');
+                        }
                     }
-                }
-            }
-
-            // 6. Toggle Hiện / Ẩn Mật Khẩu
-            const togglePasswordBtn = document.getElementById('togglePasswordBtn');
-            const passwordInput = document.getElementById('passwordInput');
-            const togglePasswordIcon = document.getElementById('togglePasswordIcon');
-
-            togglePasswordBtn.addEventListener('click', function () {
-                if (passwordInput.type === 'password') {
-                    passwordInput.type = 'text';
-                    togglePasswordIcon.classList.replace('bi-eye', 'bi-eye-slash');
-                } else {
-                    passwordInput.type = 'password';
-                    togglePasswordIcon.classList.replace('bi-eye-slash', 'bi-eye');
-                }
+                });
             });
         });
     </script>
-    <!-- TechZone Global Notify & Confirm JS -->
-    <script src="<?= BASE_URL ?>/js/techzone-notify.js"></script>
 </body>
+
 </html>

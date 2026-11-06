@@ -10,8 +10,8 @@
  * ==============================================================================
  */
 
-// Dữ liệu catalogue sản phẩm tĩnh để map thông tin giỏ hàng
-const TECHZONE_CATALOG = {
+// Dữ liệu catalogue sản phẩm để map thông tin giỏ hàng (kết hợp CSDL và fallback)
+const TECHZONE_CATALOG = Object.assign({
     'SP01': {
         maSP: 'SP01',
         tenSP: 'Dell XPS 13 9320 Plus',
@@ -44,7 +44,7 @@ const TECHZONE_CATALOG = {
         thongSo: 'Core i7-1365U • 16GB RAM • 512GB SSD • Siêu nhẹ 1.12kg',
         thuongHieu: 'LENOVO'
     }
-};
+}, window.TECHZONE_CATALOG || {});
 
 // Dữ liệu mã voucher mẫu
 const TECHZONE_VOUCHERS = {
@@ -63,6 +63,15 @@ const CartManager = {
     saveCart: function (cart) {
         localStorage.setItem('tz_cart', JSON.stringify(cart));
         this.updateHeaderBadge();
+        // Đồng bộ ngầm vào bảng giohang trong CSDL db_computer
+        if (typeof fetch === 'function' && typeof window !== 'undefined' && window.BASE_URL) {
+            const activeMaKH = window.CURRENT_MAKH || 'KH001';
+            fetch(window.BASE_URL + '/client/api-cart.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'sync_all', maKH: activeMaKH, cart: cart })
+            }).catch(() => {});
+        }
     },
 
     themSanPham: function (maSP, soLuong = 1, triggerBtn = null) {
@@ -73,6 +82,31 @@ const CartManager = {
 
         // CHỐNG SPAM: Ngăn click liên tục khi đang xử lý
         if (triggerBtn && (triggerBtn.classList.contains('is-loading') || triggerBtn.disabled)) {
+            return;
+        }
+
+        // KIỂM TRA TỒN KHO: Nếu sản phẩm hết hàng hoặc vượt quá tồn kho thì chặn ngay
+        const productInfo = (typeof TECHZONE_CATALOG !== 'undefined') ? TECHZONE_CATALOG[maSP] : null;
+        const tonKho = (productInfo && typeof productInfo.soLuongTon !== 'undefined') ? Number(productInfo.soLuongTon) : 999;
+        const itemName = productInfo?.tenSP || maSP;
+
+        if (tonKho <= 0) {
+            if (window.TechZoneNotify) {
+                TechZoneNotify.error(`Sản phẩm <strong>${itemName}</strong> hiện đã hết hàng trong kho, không thể đặt!`, 'Hết Hàng');
+            } else {
+                alert(`Sản phẩm ${itemName} hiện đã hết hàng trong kho!`);
+            }
+            return;
+        }
+
+        const currentCart = this.getCart();
+        const currentQtyInCart = Number(currentCart[maSP] || 0);
+        if (currentQtyInCart + soLuong > tonKho) {
+            if (window.TechZoneNotify) {
+                TechZoneNotify.warning(`Kho chỉ còn <strong>${tonKho}</strong> máy <strong>${itemName}</strong>! Bạn đã có ${currentQtyInCart} trong giỏ.`, 'Tồn Kho Giới Hạn');
+            } else {
+                alert(`Kho chỉ còn ${tonKho} sản phẩm!`);
+            }
             return;
         }
 
@@ -129,13 +163,29 @@ const CartManager = {
 
     capNhatSoLuong: function (maSP, soLuongMoi) {
         const cart = this.getCart();
+        const productInfo = (typeof TECHZONE_CATALOG !== 'undefined') ? TECHZONE_CATALOG[maSP] : null;
+        const tonKho = (productInfo && typeof productInfo.soLuongTon !== 'undefined') ? Number(productInfo.soLuongTon) : 999;
+        const itemName = productInfo?.tenSP || maSP;
+
         if (soLuongMoi <= 0) {
             delete cart[maSP];
             if (window.TechZoneNotify) {
                 TechZoneNotify.info('Đã xóa sản phẩm khỏi giỏ hàng.', 'Giỏ hàng');
             }
         } else {
-            cart[maSP] = soLuongMoi;
+            if (tonKho <= 0) {
+                delete cart[maSP];
+                if (window.TechZoneNotify) {
+                    TechZoneNotify.error(`Sản phẩm <strong>${itemName}</strong> đã hết hàng trong kho!`, 'Hết Hàng');
+                }
+            } else if (soLuongMoi > tonKho) {
+                cart[maSP] = tonKho;
+                if (window.TechZoneNotify) {
+                    TechZoneNotify.warning(`Số lượng tối đa có thể đặt là <strong>${tonKho}</strong> chiếc (bằng tồn kho hiện tại).`, 'Giới Hạn Tồn Kho');
+                }
+            } else {
+                cart[maSP] = soLuongMoi;
+            }
         }
         this.saveCart(cart);
         if (typeof renderCartPage === 'function') renderCartPage();

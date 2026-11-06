@@ -60,7 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sqlDeleteSoft = "UPDATE sanpham SET isDeleted = 1 WHERE maSP = '$maSP'";
 
     $resultSql = $conn->query($sqlDeleteSoft);
-    echo $resultSql;
 
     if ($resultSql === TRUE) {
         echo "<script>
@@ -254,6 +253,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <thead>
                         <tr>
                             <th style="width: 80px;">MÃ SP</th>
+                            <th style="width: 80px;">Ảnh</th>
                             <th>TÊN SẢN PHẨM & CẤU HÌNH</th>
                             <th>DANH MỤC</th>
                             <th>THƯƠNG HIỆU</th>
@@ -273,30 +273,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $brand = $_GET["thuongHieu"] ?? "";
                         $status = $_GET["trangthai"] ?? "";
 
-                        $sql = "SELECT sp.*, dm.tenDM, th.tenTH 
-                            FROM sanpham sp 
-                            LEFT JOIN danhmuc dm ON sp.maDM = dm.maDM
-                            LEFT JOIN thuonghieu th ON sp.maTH = th.maTH
-                            WHERE sp.isDeleted = 0";
+                        $sql = "SELECT * FROM sanpham WHERE isDeleted = 0";
 
                         if ($search != "") {
 
-                            $sql .= " AND sp.tenSP LIKE '%$search%'";
+                            $sql .= " AND tenSP LIKE '%$search%'";
                         }
 
                         if ($category != "") {
 
-                            $sql .= " AND sp.maDM = '$category'";
+                            $sql .= " AND maDM = '$category'";
                         }
 
                         if ($brand != "") {
 
-                            $sql .= " AND sp.maTH = '$brand'";
+                            $sql .= " AND maTH = '$brand'";
                         }
 
                         if ($status != "") {
 
-                            $sql .= " AND sp.trangThai = '$status'";
+                            $sql .= " AND trangThai = '$status'";
                         }
 
                         $resultProducts = $conn->query($sql);
@@ -307,17 +303,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                 $maSP = $row["maSP"];
                                 $tenSP = $row["tenSP"];
-                                $tenDM = $row["tenDM"];
-                                $tenTH = $row["tenTH"];
+                                $maDM = $row["maDM"] ?? "";
+                                $maTH = $row["maTH"] ?? "";
                                 $thongSo = $row["thongSoKyThuat"];
                                 $giaBan = number_format($row["giaBan"], 0, ',', '.');
                                 $soLuongTon = $row["soLuongTon"];
                                 $thoiGianBaoHanh = $row["thoiGianBaoHanh"];
                                 $viTriKho = $row["viTriKho"];
                                 $trangThai = $row["trangThai"];
+                                $logo = $row["logo"];
+
+                                // Lấy tên danh mục từ bảng danhmuc
+                                $tenDM = "";
+                                if (!empty($maDM)) {
+                                    $sqlDM = "SELECT tenDM FROM danhmuc WHERE maDM = '$maDM'";
+                                    $resDM = $conn->query($sqlDM);
+                                    if ($resDM && $resDM->num_rows > 0) {
+                                        $tenDM = $resDM->fetch_assoc()['tenDM'];
+                                    }
+                                }
+
+                                // Lấy tên thương hiệu từ bảng thuonghieu
+                                $tenTH = "";
+                                if (!empty($maTH)) {
+                                    $sqlTH = "SELECT tenTH FROM thuonghieu WHERE maTH = '$maTH'";
+                                    $resTH = $conn->query($sqlTH);
+                                    if ($resTH && $resTH->num_rows > 0) {
+                                        $tenTH = $resTH->fetch_assoc()['tenTH'];
+                                    }
+                                }
                         ?>
                                 <tr>
                                     <td><span class="badge bg-light text-dark border font-monospace"><?= $maSP ?></span></td>
+                                    <td class="text-center">
+                                        <div class="tz-logo-cell">
+                                            <img src=" <?= $logo  ?>">
+
+                                        </div>
+                                    </td>
                                     <td>
                                         <div class="fw-bold text-dark"><?= $tenSP ?></div>
                                         <small class="text-muted" style="font-size: 11.5px;"><?= $thongSo ?></small>
@@ -326,12 +349,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <td><span class="fw-bold text-primary"><?= $tenTH ?></span></td>
                                     <td><span class="fw-bold text-danger"><?= $giaBan ?> ₫</span></td>
                                     <td>
-                                        <?php if ($soLuongTon > 0): ?>
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold">
-                                                <?= $soLuongTon ?> chiếc
+                                        <?php if ($soLuongTon > 5): ?>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold px-2 py-1">
+                                                <i class="bi bi-box-seam me-1"></i><?= $soLuongTon ?> chiếc
+                                            </span>
+                                        <?php elseif ($soLuongTon > 0): ?>
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-semibold px-2 py-1" title="Sắp hết hàng">
+                                                <i class="bi bi-exclamation-circle me-1"></i><?= $soLuongTon ?> chiếc
                                             </span>
                                         <?php else: ?>
-                                            <span class="badge bg-danger text-white fw-bold px-2 py-1">
+                                            <span class="badge bg-danger text-white fw-bold px-2 py-1 shadow-sm">
                                                 <i class="bi bi-exclamation-triangle-fill me-1"></i>HẾT HÀNG (0)
                                             </span>
                                         <?php endif; ?>

@@ -4,61 +4,56 @@ $pageTitle = "Chỉnh sửa thông tin Laptop";
 require_once dirname(__DIR__) . '/layouts/header.php';
 require_once dirname(__DIR__) . '/layouts/sidebar.php';
 include __DIR__ . "/../../config/database.php";
-    $maSP = $_GET['id'] ?? '';
-    $conn = new mysqli($servername, $username, $password, $dbname);
-    if($conn->connect_error){
-        die("Connection failed: " . $conn->connect_error);
+$maSP = $_GET['id'] ?? '';
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+$sql = "SELECT * FROM sanpham WHERE maSP = '$maSP' ";
+$resultSql =  $conn->query($sql);
+if ($resultSql->num_rows > 0) {
+    while ($row = $resultSql->fetch_assoc()) {
+        $tenSP = $row["tenSP"];
+        $maSP = $row["maSP"];
+        $thoiGianBaoHanh = $row["thoiGianBaoHanh"];
+        $moTa = $row["moTa"];
+        $maDMEdit = $row["maDM"];
+        $maTHEdit = $row["maTH"];
+        $trangThai = $row["trangThai"];
+        $soLuongTon = $row["soLuongTon"];
+        $giaBan = $row["giaBan"];
+        $thongSoKyThuat = $row["thongSoKyThuat"];
+        $logo = $row["logo"];
     }
-    $sql = "SELECT * FROM sanpham WHERE maSP = '$maSP' ";
-    $resultSql =  $conn->query($sql);
-    if ($resultSql->num_rows > 0){
-        while($row = $resultSql -> fetch_assoc()){
-            $tenSP = $row["tenSP"];
-            $maSP = $row["maSP"];
-            $thoiGianBaoHanh = $row["thoiGianBaoHanh"];
-            $moTa = $row["moTa"];
-            $maDMEdit = $row["maDM"];
-            $maTHEdit = $row["maTH"];
-            $trangThai = $row["trangThai"];
-            $soLuongTon = $row["soLuongTon"];
-            $giaBan = $row["giaBan"];
-            $thongSoKyThuat = $row["thongSoKyThuat"];
+}
+
+if ($_SERVER["REQUEST_METHOD"] === 'POST') {
+    $maSP = $_POST['maSP'] ?? '';
+    $tenSP = $_POST['tenSP'] ?? '';
+    $maTH = $_POST['maTH'] ?? '';
+    $maDM = $_POST['maDM'] ?? '';
+    $giaBan = $_POST['giaBan'] ?? 0;
+    $soLuongTon = $_POST['soLuongTon'] ?? 0;
+    $moTa = $_POST['moTa'] ?? '';
+    $thongSoKyThuat = $_POST['thongSoKyThuat'] ?? '';
+    $trangThai = $_POST['trangThai'] ?? 1;
+    $thoiGianBaoHanh = $_POST['thoiGianBaoHanh'] ?? 24;
+    $logo = trim($_POST['logo'] ?? '');
+
+    // Xử lý upload file ảnh mới từ máy tính (nếu có chọn file)
+    if (isset($_FILES['logo_file']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
+        $fileTmp = $_FILES['logo_file']['tmp_name'];
+        $fileName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', basename($_FILES['logo_file']['name']));
+        $targetDir = dirname(__DIR__, 3) . '/public/uploads/products/';
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0777, true);
+        }
+        if (move_uploaded_file($fileTmp, $targetDir . $fileName)) {
+            $logo = 'public/uploads/products/' . $fileName;
         }
     }
 
-    if($_SERVER["REQUEST_METHOD"] === 'POST'){
-        $maSP = $_POST['maSP'] ;
-        $tenSP = $_POST['tenSP'];
-        $maTH = $_POST['maTH'];
-        $maDM = $_POST['maDM'];
-        $giaBan = $_POST['giaBan'];
-        $soLuongTon = $_POST['soLuongTon'];
-        $moTa = $_POST['moTa'];
-        $thongSoKyThuat = $_POST['thongSoKyThuat'];
-        $trangThai = $_POST['trangThai'];
-        $thoiGianBaoHanh = $_POST['thoiGianBaoHanh'];
-
-        // echo $maSP;
-        // echo "<br>";
-        // echo $tenSP;
-        // echo "<br>";
-        // echo $maTH;
-        // echo "<br>";
-        // echo $maDM;
-        // echo "<br>";
-        // echo $giaBan;
-        // echo "<br>";
-        // echo $soLuongTon;
-        // echo "<br>";
-        // echo $moTa;
-        // echo "<br>";
-        // echo $thongSoKyThuat;
-        // echo "<br>";
-        // echo $trangThai;
-        // echo "<br>";
-        // echo $thoiGianBaoHanh;
-        
-        $sqlUpdate = "UPDATE sanpham SET
+    $sqlUpdate = "UPDATE sanpham SET
             tenSP = '$tenSP',
             maTH = '$maTH',
             maDM = '$maDM',
@@ -67,21 +62,23 @@ include __DIR__ . "/../../config/database.php";
             moTa = '$moTa',
             thongSoKyThuat = '$thongSoKyThuat',
             trangThai = '$trangThai',
-            thoiGianBaoHanh = '$thoiGianBaoHanh'
+            thoiGianBaoHanh = '$thoiGianBaoHanh',
+            logo='$logo'
         WHERE
             maSP = '$maSP' ";
-            $resultSql = $conn->query($sqlUpdate);
-            if($resultSql === TRUE){
-                echo "<script>";
-                echo "window.location.href='san-pham.php';";
-                echo "</script>";
-            }else{
-            echo "<script>";
-            echo "alert('Lỗi khi cập nhật sản phẩm');";
-            echo "</script>";
-        }
-
+    $resultSql = $conn->query($sqlUpdate);
+    if ($resultSql === TRUE) {
+        echo "<script>
+            alert('Cập nhật sản phẩm thành công!');
+            window.location.href='san-pham.php';
+        </script>";
+        exit;
+    } else {
+        echo "<script>
+            alert('Lỗi khi cập nhật sản phẩm: " . addslashes($conn->error) . "');
+        </script>";
     }
+}
 
 ?>
 
@@ -108,9 +105,9 @@ include __DIR__ . "/../../config/database.php";
         </div>
 
         <!-- Form Chỉnh Sửa Sản Phẩm (Gửi bằng POST Form thuần) -->
-        <form action="edit.php" method="POST" enctype="multipart/form-data">
+        <form action="edit.php?id=<?= urlencode($maSP) ?>" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="action" value="update">
-            
+
             <div class="row g-4">
                 <!-- Cột trái: Thông tin chính -->
                 <div class="col-xl-8">
@@ -122,7 +119,7 @@ include __DIR__ . "/../../config/database.php";
                         <div class="tz-card-body">
                             <div class="mb-3">
                                 <label class="form-label">Tên sản phẩm Laptop (tenSP) <span class="text-danger">*</span></label>
-                                <input type="text" name="tenSP" class="form-control" value="<?=$tenSP  ?>" required>
+                                <input type="text" name="tenSP" class="form-control" value="<?= $tenSP  ?>" required>
                             </div>
 
                             <div class="row g-3 mb-3">
@@ -134,10 +131,10 @@ include __DIR__ . "/../../config/database.php";
                                 <div class="col-md-6">
                                     <label class="form-label">Thời hạn bảo hành (thoiGianBaoHanh)</label>
                                     <select name="thoiGianBaoHanh" class="form-select">
-                                       
-                                            <option value="12" <?php echo ($thoiGianBaoHanh == 12) ? 'selected' : ''; ?>>12 tháng (1 năm)</option>
-                                            <option value="24" <?php echo ($thoiGianBaoHanh == 24) ? 'selected' : ''; ?>>24 tháng (2 năm)</option>
-                                            <option value="36" <?php echo ($thoiGianBaoHanh == 36) ? 'selected' : ''; ?>>36 tháng (3 năm)</option>
+
+                                        <option value="12" <?php echo ($thoiGianBaoHanh == 12) ? 'selected' : ''; ?>>12 tháng (1 năm)</option>
+                                        <option value="24" <?php echo ($thoiGianBaoHanh == 24) ? 'selected' : ''; ?>>24 tháng (2 năm)</option>
+                                        <option value="36" <?php echo ($thoiGianBaoHanh == 36) ? 'selected' : ''; ?>>36 tháng (3 năm)</option>
                                     </select>
                                 </div>
                             </div>
@@ -173,15 +170,20 @@ include __DIR__ . "/../../config/database.php";
                                     <label class="form-label">Giá bán niêm yết (giaBan) <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-white">₫</span>
-                                        <input type="number" name="giaBan" class="form-control" value=<?php echo $giaBan; ?> min="0"  required>
+                                        <input type="number" name="giaBan" class="form-control" value=<?php echo $giaBan; ?> min="0" required>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Số lượng tồn kho (soLuongTon) <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-white"><i class="bi bi-box"></i></span>
-                                        <input type="number" name="soLuongTon" class="form-control" value=<?php echo $soLuongTon; ?> min="0" required>
+                                        <input type="number" name="soLuongTon" class="form-control" value="<?= (int)$soLuongTon ?>" min="0" required>
                                     </div>
+                                    <?php if ($soLuongTon <= 0): ?>
+                                        <small class="text-danger fw-bold mt-1 d-block"><i class="bi bi-exclamation-triangle-fill me-1"></i>Trạng thái kho: HẾT HÀNG (Khách không thể đặt)</small>
+                                    <?php else: ?>
+                                        <small class="text-success fw-semibold mt-1 d-block"><i class="bi bi-check-circle-fill me-1"></i>Trạng thái kho: Còn <?= (int)$soLuongTon ?> máy sẵn sàng bán</small>
+                                    <?php endif; ?>
                                 </div>
                             </div>
 
@@ -189,8 +191,8 @@ include __DIR__ . "/../../config/database.php";
                                 <div class="col-md-6">
                                     <label class="form-label">Trạng thái kinh doanh (trangThai)</label>
                                     <select name="trangThai" class="form-select">
-                                        <option value="1" <?php echo ($trangThai == 1) ? 'selected': '' ?>>1 - Đang kinh doanh</option>
-                                        <option value="0" <?php echo ($trangThai == 0) ? 'selected': ''  ?>>0 - Ngừng kinh doanh</option>
+                                        <option value="1" <?php echo ($trangThai == 1) ? 'selected' : '' ?>>1 - Đang kinh doanh</option>
+                                        <option value="0" <?php echo ($trangThai == 0) ? 'selected' : ''  ?>>0 - Ngừng kinh doanh</option>
                                     </select>
                                 </div>
                             </div>
@@ -211,20 +213,20 @@ include __DIR__ . "/../../config/database.php";
                                 <label class="form-label mb-1">Danh mục sản phẩm (maDM) <span class="text-danger">*</span></label>
                                 <select name="maDM" class="form-select" required>
                                     <?php
-                                        $sqlCategory = "SELECT * FROM danhmuc WHERE trangThai ='1'";
-                                        $resultCategory = $conn->query($sqlCategory);
-                                        if($resultCategory->num_rows>0){
-                                            while($row = $resultCategory->fetch_assoc()){
-                                                $tenDM = $row["tenDM"];
-                                                $maDM = $row["maDM"];
+                                    $sqlCategory = "SELECT * FROM danhmuc WHERE trangThai ='1'";
+                                    $resultCategory = $conn->query($sqlCategory);
+                                    if ($resultCategory->num_rows > 0) {
+                                        while ($row = $resultCategory->fetch_assoc()) {
+                                            $tenDM = $row["tenDM"];
+                                            $maDM = $row["maDM"];
 
-                                          
+
 
                                     ?>
-                                        <option value="<?=$maDM ?>" <?= ($maDM == $maDMEdit) ? 'selected':''  ?> ><?=$tenDM  ?></option>
+                                            <option value="<?= $maDM ?>" <?= ($maDM == $maDMEdit) ? 'selected' : ''  ?>><?= $tenDM  ?></option>
                                     <?php
-                                      }
                                         }
+                                    }
                                     ?>
                                 </select>
                             </div>
@@ -233,36 +235,52 @@ include __DIR__ . "/../../config/database.php";
                             <div class="mb-0">
                                 <label class="form-label mb-1">Thương hiệu hãng (maTH) <span class="text-danger">*</span></label>
                                 <select name="maTH" class="form-select" required>
-                                 <?php
-                                        $sqlBrand = "SELECT * FROM thuonghieu WHERE trangThai ='1'";
-                                        $resultBrand = $conn->query($sqlBrand);
-                                        if($resultBrand->num_rows>0){
-                                            while($row = $resultBrand->fetch_assoc()){
-                                                $tenTH = $row["tenTH"];
-                                                $maTH = $row["maTH"];
+                                    <?php
+                                    $sqlBrand = "SELECT * FROM thuonghieu WHERE trangThai ='1'";
+                                    $resultBrand = $conn->query($sqlBrand);
+                                    if ($resultBrand->num_rows > 0) {
+                                        while ($row = $resultBrand->fetch_assoc()) {
+                                            $tenTH = $row["tenTH"];
+                                            $maTH = $row["maTH"];
 
 
                                     ?>
-                                        <option value="<?=$maTH ?>" <?= ($maTH == $maTHEdit) ? 'selected':''  ?> ><?=$tenTH  ?></option>
+                                            <option value="<?= $maTH ?>" <?= ($maTH == $maTHEdit) ? 'selected' : ''  ?>><?= $tenTH  ?></option>
                                     <?php
-                                      }
                                         }
+                                    }
                                     ?>
                                 </select>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Thẻ Upload Hình ảnh (hinhAnh) -->
+                    <!-- Thẻ Upload / URL Hình ảnh -->
                     <div class="tz-card mb-4">
                         <div class="tz-card-header">
-                            <h3 class="tz-card-title"><i class="bi bi-image text-primary"></i>Hình ảnh đại diện (hinhAnh)</h3>
+                            <h3 class="tz-card-title"><i class="bi bi-image text-primary"></i>Hình ảnh đại diện</h3>
                         </div>
-                        <div class="tz-card-body text-center">
-                            <div class="p-3 border rounded-3 bg-light d-flex flex-column align-items-center justify-content-center">
-                                <i class="bi bi-laptop text-primary" style="font-size: 50px;"></i>
-                                <span class="badge bg-light text-muted border my-2">Dell-XPS-13-2024.png</span>
-                                <input type="file" name="hinhAnh" class="form-control form-control-sm mt-2" accept="image/*">
+                        <div class="tz-card-body">
+                            <div class="text-center mb-3">
+                                <?php if (!empty($logo)): ?>
+                                    <div class="p-2 border rounded-3 bg-white d-inline-block">
+                                        <img src="<?= htmlspecialchars($logo) ?>" alt="<?= htmlspecialchars($tenSP ?? '') ?>" style="max-height: 120px; max-width: 100%; object-fit: contain;" onerror="this.src='https://placehold.co/180x120?text=No+Image';">
+                                    </div>
+                                <?php else: ?>
+                                    <div class="p-3 border rounded-3 bg-light d-flex flex-column align-items-center justify-content-center">
+                                        <i class="bi bi-laptop text-primary" style="font-size: 50px;"></i>
+                                        <small class="text-muted mt-1">Chưa có ảnh</small>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Đường dẫn URL ảnh (logo)</label>
+                                <input type="text" name="logo" class="form-control" value="<?= htmlspecialchars($logo ?? '') ?>" placeholder="VD: https://... hoặc public/uploads/...">
+                                <small class="text-muted" style="font-size: 11.5px;">Nhập link ảnh trực tiếp từ internet hoặc đường dẫn</small>
+                            </div>
+                            <div class="mb-0">
+                                <label class="form-label small fw-semibold text-secondary">Hoặc tải file từ máy tính</label>
+                                <input type="file" name="logo_file" class="form-control form-control-sm" accept="image/*">
                             </div>
                         </div>
                     </div>

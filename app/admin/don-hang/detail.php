@@ -4,51 +4,165 @@ $pageTitle = "Chi tiết đơn bán hàng";
 require_once dirname(__DIR__) . '/layouts/header.php';
 require_once dirname(__DIR__) . '/layouts/sidebar.php';
 
-$maDH = htmlspecialchars($_GET['id'] ?? 'DH01');
+$maDH = htmlspecialchars($_GET['id'] ?? $_GET['maDH'] ?? 'DH001');
 
-// Trạng thái đơn mô phỏng: tiep_nhan | da_duyet | van_chuyen | hoan_thanh | da_huy
-$statusParam = $_GET['status'] ?? 'tiep_nhan';
+include __DIR__ . "/../../config/database.php";
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die("Lỗi kết nối database: " . $conn->connect_error);
+}
 
-// Xử lý Action POST
 $alertMsg = '';
+
+// Xử lý Form Action
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+
     if ($action === 'approve_order') {
-        $statusParam = 'da_duyet';
+        $conn->query("UPDATE donhang SET trangThaiDon = 'HOAN_THANH' WHERE maDH = '$maDH'");
         $alertMsg = "<div class='alert alert-success alert-dismissible fade show' role='alert'>
-                        <i class='bi bi-check2-circle me-2'></i>Đã duyệt đơn hàng thành công! Đã tự động cập nhật tồn kho và kích hoạt bảo hành theo Serial máy.
+                        <i class='bi bi-check2-circle me-2'></i>Đã hoàn tất duyệt và hoàn thành đơn hàng <strong>$maDH</strong>!
+                        <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
+                     </div>";
+    } elseif ($action === 'ship_order') {
+        $conn->query("UPDATE donhang SET trangThaiDon = 'DANG_GIAO' WHERE maDH = '$maDH'");
+        $alertMsg = "<div class='alert alert-info alert-dismissible fade show' role='alert'>
+                        <i class='bi bi-truck me-2'></i>Đơn hàng <strong>$maDH</strong> đã được chuyển sang trạng thái Đang giao hàng!
                         <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
                      </div>";
     } elseif ($action === 'cancel_order') {
-        $statusParam = 'da_huy';
-        $lyDo = htmlspecialchars($_POST['lyDo'] ?? '');
+        // Hoàn trả serial về kho
+        $conn->query("UPDATE serialsanpham SET idChiTietDonHang = NULL, trangThai = 'Trong kho' WHERE idChiTietDonHang IN (SELECT id FROM chitietdonhang WHERE maDH = '$maDH')");
+
+        // Hoàn lại số lượng tồn kho sản phẩm
+        $resIt = $conn->query("SELECT maSP, soLuong FROM chitietdonhang WHERE maDH = '$maDH'");
+        if ($resIt && $resIt->num_rows > 0) {
+            while ($it = $resIt->fetch_assoc()) {
+                $sp = $it['maSP'];
+                $sl = $it['soLuong'];
+                $conn->query("UPDATE sanpham SET soLuongTon = soLuongTon + $sl WHERE maSP = '$sp'");
+            }
+        }
+
+        $conn->query("UPDATE donhang SET trangThaiDon = 'DA_HUY' WHERE maDH = '$maDH'");
         $alertMsg = "<div class='alert alert-danger alert-dismissible fade show' role='alert'>
-                        <i class='bi bi-x-circle me-2'></i>Đơn hàng đã được hủy thành công! Số lượng sản phẩm và mã Serial đã được hoàn trả về kho.
+                        <i class='bi bi-x-circle me-2'></i>Đã hủy đơn hàng <strong>$maDH</strong> và hoàn trả toàn bộ số lượng sản phẩm/serial về kho!
                         <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
                      </div>";
     } elseif ($action === 'assign_serial') {
-        $serial = htmlspecialchars($_POST['maSerial'] ?? '');
-        $alertMsg = "<div class='alert alert-info alert-dismissible fade show' role='alert'>
-                        <i class='bi bi-upc-scan me-2'></i>Đã gán thành công mã Serial <strong>$serial</strong> cho đơn hàng! Hạn bảo hành: 24 tháng kể từ ngày xuất kho.
-                        <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
-                     </div>";
-    } elseif ($action === 'update_shipping') {
-        $newShippingStatus = htmlspecialchars($_POST['trangThaiMoi'] ?? 'van_chuyen');
-        $statusParam = $newShippingStatus;
-        $alertMsg = "<div class='alert alert-primary alert-dismissible fade show' role='alert'>
-                        <i class='bi bi-truck me-2'></i>Đã cập nhật trạng thái vận chuyển đơn hàng thành công!
-                        <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
-                     </div>";
+        $idCTDH = intval($_POST['idChiTietDonHang'] ?? 0);
+        $serialVal = trim($_POST['maSerial'] ?? '');
+
+        if (!empty($serialVal) && $idCTDH > 0) {
+            $conn->query("UPDATE serialsanpham SET idChiTietDonHang = $idCTDH, trangThai = 'Đã bán', ngayXuatKho = NOW() WHERE maSerial_IMEI = '$serialVal'");
+
+            // Tự động kích hoạt phiếu bảo hành điện tử chính hãng khi bán máy
+            require_once __DIR__ . '/../../helpers/warranty_helper.php';
+            $maPBHMoi = kichHoatBaoHanhTuDong($conn, $serialVal, $dh['maKH'] ?? '');
+
+            $bhText = $maPBHMoi ? " và tự động kích hoạt Phiếu bảo hành điện tử (<strong>$maPBHMoi</strong>)" : "";
+            $alertMsg = "<div class='alert alert-success alert-dismissible fade show' role='alert'>
+                            <i class='bi bi-upc-scan me-2'></i>Đã gán thành công mã Serial <strong>$serialVal</strong> cho đơn hàng$bhText!
+                            <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
+                         </div>";
+        }
+    } elseif ($action === 'create_invoice') {
+        // Tự động xuất hóa đơn nếu chưa có
+        $chkHD = $conn->query("SELECT maHD FROM hoadon WHERE maDH = '$maDH'");
+        if ($chkHD && $chkHD->num_rows > 0) {
+            $alertMsg = "<div class='alert alert-warning alert-dismissible fade show' role='alert'>
+                            <i class='bi bi-exclamation-triangle me-2'></i>Đơn hàng này đã được xuất hóa đơn trước đó!
+                            <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
+                         </div>";
+        } else {
+            $sqlD = "SELECT * FROM donhang WHERE maDH = '$maDH'";
+            $resD = $conn->query($sqlD);
+            $dRow = ($resD && $resD->num_rows > 0) ? $resD->fetch_assoc() : null;
+            if ($dRow) {
+                $maHD = 'HD_' . $maDH;
+                $maKH = $dRow['maKH'];
+                $tenKH = "Khách vãng lai";
+                $sdt = "";
+                $diaChi = "";
+                if (!empty($maKH)) {
+                    $resKH = $conn->query("SELECT * FROM khachhang WHERE maKH = '$maKH'");
+                    if ($resKH && $resKH->num_rows > 0) {
+                        $rowKH = $resKH->fetch_assoc();
+                        $tenKH = $rowKH['hoVaTen'];
+                        $sdt = $rowKH['soDienThoai'];
+                        $diaChi = $rowKH['diaChi'];
+                    }
+                }
+                $tongTien = $dRow['tongThanhToan'];
+                $conn->query("INSERT INTO hoadon (maHD, maDH, ngayXuat, tenKhachHang, soDienThoai, diaChiKhachHang, soTienThanhToan, trangThaiThanhToan, ghiChu) 
+                              VALUES ('$maHD', '$maDH', NOW(), '$tenKH', '$sdt', '$diaChi', '$tongTien', 'DA_THANH_TOAN', 'Xuất từ chi tiết đơn hàng')");
+                $alertMsg = "<div class='alert alert-success alert-dismissible fade show' role='alert'>
+                                <i class='bi bi-receipt me-2'></i>Đã xuất thành công hóa đơn tài chính <strong>$maHD</strong>!
+                                <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
+                             </div>";
+            }
+        }
     }
 }
 
-// Bảng trạng thái Stepper
-$stepIndex = 1;
-if ($statusParam === 'tiep_nhan') $stepIndex = 1;
-elseif ($statusParam === 'da_duyet') $stepIndex = 2;
-elseif ($statusParam === 'van_chuyen') $stepIndex = 3;
-elseif ($statusParam === 'hoan_thanh') $stepIndex = 4;
-elseif ($statusParam === 'da_huy') $stepIndex = -1;
+// Truy vấn thông tin đơn hàng
+$sql = "SELECT * FROM donhang WHERE maDH = '$maDH'";
+$res = $conn->query($sql);
+if (!$res || $res->num_rows === 0) {
+    echo "<script>alert('Không tìm thấy đơn hàng $maDH!'); window.location.href='don-hang.php';</script>";
+    exit;
+}
+$dh = $res->fetch_assoc();
+
+// Lấy thông tin khách hàng từ bảng khachhang
+$dh['tenKhachHang'] = 'Khách vãng lai';
+$dh['sdtKhach'] = '';
+$dh['emailKhach'] = '';
+$dh['diaChiKhach'] = '';
+if (!empty($dh['maKH'])) {
+    $resKH = $conn->query("SELECT * FROM khachhang WHERE maKH = '" . $dh['maKH'] . "'");
+    if ($resKH && $resKH->num_rows > 0) {
+        $rowKH = $resKH->fetch_assoc();
+        $dh['tenKhachHang'] = $rowKH['hoVaTen'];
+        $dh['sdtKhach'] = $rowKH['soDienThoai'];
+        $dh['emailKhach'] = $rowKH['email'];
+        $dh['diaChiKhach'] = $rowKH['diaChi'];
+    }
+}
+
+// Lấy thông tin khuyến mãi từ bảng khuyenmai
+$dh['tenKM'] = '';
+$dh['giaTriGiam'] = 0;
+$dh['loaiKM'] = '';
+if (!empty($dh['maKM'])) {
+    $resKM = $conn->query("SELECT * FROM khuyenmai WHERE maKM = '" . $dh['maKM'] . "'");
+    if ($resKM && $resKM->num_rows > 0) {
+        $rowKM = $resKM->fetch_assoc();
+        $dh['tenKM'] = $rowKM['tenKM'];
+        $dh['giaTriGiam'] = $rowKM['giaTriGiam'];
+        $dh['loaiKM'] = $rowKM['loaiKM'];
+    }
+}
+
+// Lấy thông tin nhân viên phụ trách từ bảng accounts
+$dh['tenNhanVien'] = 'Hệ thống / Chưa giao';
+$dh['emailNV'] = '';
+if (!empty($dh['nguoiPhuTrach'])) {
+    $resNV = $conn->query("SELECT * FROM accounts WHERE maTk = '" . $dh['nguoiPhuTrach'] . "'");
+    if ($resNV && $resNV->num_rows > 0) {
+        $rowNV = $resNV->fetch_assoc();
+        $dh['tenNhanVien'] = $rowNV['hoTen'];
+        $dh['emailNV'] = $rowNV['email'];
+    }
+}
+
+// Truy vấn các mặt hàng trong đơn từ bảng chitietdonhang
+$sqlItems = "SELECT * FROM chitietdonhang WHERE maDH = '$maDH'";
+$resItems = $conn->query($sqlItems);
+
+// Kiểm tra hóa đơn đã xuất
+$resHD = $conn->query("SELECT maHD, ngayXuat FROM hoadon WHERE maDH = '$maDH'");
+$hoaDonRow = ($resHD && $resHD->num_rows > 0) ? $resHD->fetch_assoc() : null;
 ?>
 
 <div class="tz-main-wrapper">
@@ -64,343 +178,212 @@ elseif ($statusParam === 'da_huy') $stepIndex = -1;
                     <ol class="breadcrumb mb-1 text-muted" style="font-size: 13px;">
                         <li class="breadcrumb-item"><a href="../dashboard/dashboard.php" class="text-decoration-none text-muted">Quản trị</a></li>
                         <li class="breadcrumb-item"><a href="don-hang.php" class="text-decoration-none text-muted">Đơn hàng</a></li>
-                        <li class="breadcrumb-item active text-primary" aria-current="page"><?= $maDH ?></li>
+                        <li class="breadcrumb-item active text-primary" aria-current="page"><?= htmlspecialchars($maDH) ?></li>
                     </ol>
                 </nav>
                 <div class="d-flex align-items-center gap-3">
-                    <h2 class="fw-bold text-dark mb-0" style="font-size: 22px;">Chi Tiết Đơn Bán Hàng: <?= $maDH ?></h2>
-                    <?php if ($statusParam === 'tiep_nhan'): ?>
-                        <span class="badge bg-warning text-dark px-3 py-2"><i class="bi bi-hourglass-split me-1"></i>Tiếp nhận (Chờ duyệt)</span>
-                    <?php elseif ($statusParam === 'da_duyet'): ?>
-                        <span class="badge bg-primary text-white px-3 py-2"><i class="bi bi-check2-circle me-1"></i>Đã duyệt</span>
-                    <?php elseif ($statusParam === 'van_chuyen'): ?>
-                        <span class="badge bg-info text-white px-3 py-2"><i class="bi bi-truck me-1"></i>Đang vận chuyển</span>
-                    <?php elseif ($statusParam === 'hoan_thanh'): ?>
-                        <span class="badge bg-success text-white px-3 py-2"><i class="bi bi-check2-all me-1"></i>Hoàn thành</span>
-                    <?php elseif ($statusParam === 'da_huy'): ?>
-                        <span class="badge bg-danger text-white px-3 py-2"><i class="bi bi-x-octagon me-1"></i>Đã hủy đơn</span>
+                    <h2 class="fw-bold text-dark mb-0" style="font-size: 22px;">Đơn Hàng: #<?= htmlspecialchars($maDH) ?></h2>
+                    <?php if ($dh['trangThaiDon'] === 'HOAN_THANH'): ?>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5"><i class="bi bi-check2-circle me-1"></i>HOÀN THÀNH</span>
+                    <?php elseif ($dh['trangThaiDon'] === 'DANG_GIAO'): ?>
+                        <span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-1.5"><i class="bi bi-truck me-1"></i>ĐANG GIAO HÀNG</span>
+                    <?php elseif ($dh['trangThaiDon'] === 'CHO_DUYET'): ?>
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-1.5"><i class="bi bi-hourglass-split me-1"></i>CHỜ DUYỆT</span>
+                    <?php else: ?>
+                        <span class="badge bg-secondary-subtle text-secondary border px-3 py-1.5">ĐÃ HỦY</span>
                     <?php endif; ?>
                 </div>
             </div>
 
-            <!-- Nút điều hướng nhanh Demo & Quay lại -->
             <div class="d-flex align-items-center gap-2">
-                <div class="btn-group">
-                    <a href="detail.php?id=<?= $maDH ?>&status=tiep_nhan" class="btn btn-sm <?= $statusParam === 'tiep_nhan' ? 'btn-warning' : 'btn-outline-secondary' ?>">Tiếp nhận</a>
-                    <a href="detail.php?id=<?= $maDH ?>&status=da_duyet" class="btn btn-sm <?= $statusParam === 'da_duyet' ? 'btn-primary' : 'btn-outline-secondary' ?>">Đã duyệt</a>
-                    <a href="detail.php?id=<?= $maDH ?>&status=van_chuyen" class="btn btn-sm <?= $statusParam === 'van_chuyen' ? 'btn-info text-white' : 'btn-outline-secondary' ?>">Vận chuyển</a>
-                    <a href="detail.php?id=<?= $maDH ?>&status=hoan_thanh" class="btn btn-sm <?= $statusParam === 'hoan_thanh' ? 'btn-success' : 'btn-outline-secondary' ?>">Hoàn thành</a>
-                </div>
-                <a href="don-hang.php" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+                <?php if ($hoaDonRow): ?>
+                    <a href="../hoa-don/detail.php?id=<?= urlencode($hoaDonRow['maHD']) ?>" class="btn btn-outline-success">
+                        <i class="bi bi-receipt me-1"></i>Xem Hóa Đơn (<?= htmlspecialchars($hoaDonRow['maHD']) ?>)
+                    </a>
+                <?php else: ?>
+                    <form action="detail.php?id=<?= urlencode($maDH) ?>" method="POST" class="d-inline">
+                        <input type="hidden" name="action" value="create_invoice">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-receipt-cutoff me-1"></i>Xuất Hóa Đơn VAT
+                        </button>
+                    </form>
+                <?php endif; ?>
+
+                <a href="edit.php?maDH=<?= urlencode($maDH) ?>" class="btn btn-outline-secondary">
+                    <i class="bi bi-pencil-square me-1"></i>Sửa đơn
+                </a>
+                <a href="don-hang.php" class="btn btn-back-pill">
+                    <i class="bi bi-arrow-left"></i> Quay lại
                 </a>
             </div>
         </div>
 
-        <!-- THANH TIẾN TRÌNH STEPPER (5 Trạng Thái DonHang.trangThaiDon) -->
-        <div class="tz-card p-4 mb-4">
-            <h5 class="fw-bold text-dark mb-4" style="font-size: 15px;">
-                <i class="bi bi-diagram-3 text-primary me-2"></i>Tiến Trình Xử Lý Đơn Hàng (DonHang.trangThaiDon)
-            </h5>
-            
-            <?php if ($statusParam === 'da_huy'): ?>
-                <div class="p-3 bg-danger-subtle text-danger border border-danger-subtle rounded d-flex align-items-center justify-content-between">
-                    <div>
-                        <i class="bi bi-x-circle-fill fs-4 me-2 align-middle"></i>
-                        <span class="fw-bold">ĐƠN HÀNG ĐÃ BỊ HỦY.</span> Lý do: <em>Khách hàng đổi ý / không nhận máy</em>. Mã Serial đã được hoàn về trạng thái [Trong kho].
-                    </div>
-                </div>
-            <?php else: ?>
-                <div class="d-flex justify-content-between position-relative px-4">
-                    <!-- Progress Bar nền -->
-                    <div class="position-absolute top-50 start-0 translate-middle-y w-100" style="height: 4px; background: #e2e8f0; z-index: 1;">
-                        <div style="height: 100%; background: #2563eb; width: <?= ($stepIndex - 1) * 33.33 ?>%; transition: width 0.3s ease;"></div>
-                    </div>
-
-                    <!-- Bước 1: Tiếp nhận -->
-                    <div class="text-center position-relative" style="z-index: 2;">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold mx-auto mb-2 text-white <?= $stepIndex >= 1 ? 'bg-primary' : 'bg-secondary' ?>" style="width: 38px; height: 38px;">
-                            1
-                        </div>
-                        <div class="fw-bold <?= $stepIndex >= 1 ? 'text-primary' : 'text-muted' ?>" style="font-size: 13.5px;">Tiếp nhận</div>
-                        <small class="text-muted">tiepNhanDon()</small>
-                    </div>
-
-                    <!-- Bước 2: Đã duyệt -->
-                    <div class="text-center position-relative" style="z-index: 2;">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold mx-auto mb-2 text-white <?= $stepIndex >= 2 ? 'bg-primary' : 'bg-secondary' ?>" style="width: 38px; height: 38px;">
-                            2
-                        </div>
-                        <div class="fw-bold <?= $stepIndex >= 2 ? 'text-primary' : 'text-muted' ?>" style="font-size: 13.5px;">Đã duyệt</div>
-                        <small class="text-muted">duyetDon()</small>
-                    </div>
-
-                    <!-- Bước 3: Đang vận chuyển -->
-                    <div class="text-center position-relative" style="z-index: 2;">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold mx-auto mb-2 text-white <?= $stepIndex >= 3 ? 'bg-primary' : 'bg-secondary' ?>" style="width: 38px; height: 38px;">
-                            3
-                        </div>
-                        <div class="fw-bold <?= $stepIndex >= 3 ? 'text-primary' : 'text-muted' ?>" style="font-size: 13.5px;">Đang vận chuyển</div>
-                        <small class="text-muted">capNhatTrangThaiVanChuyen()</small>
-                    </div>
-
-                    <!-- Bước 4: Hoàn thành -->
-                    <div class="text-center position-relative" style="z-index: 2;">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold mx-auto mb-2 text-white <?= $stepIndex >= 4 ? 'bg-success' : 'bg-secondary' ?>" style="width: 38px; height: 38px;">
-                            4
-                        </div>
-                        <div class="fw-bold <?= $stepIndex >= 4 ? 'text-success' : 'text-muted' ?>" style="font-size: 13.5px;">Hoàn thành</div>
-                        <small class="text-muted">Giao thành công</small>
-                    </div>
-                </div>
-            <?php endif; ?>
-        </div>
-
         <div class="row g-4">
-            <!-- Cột Trái: Bảng Chi Tiết Đơn Hàng & Gán Serial -->
-            <div class="col-lg-8">
+            <!-- Cột Trái: Thông tin khách hàng & Giao dịch -->
+            <div class="col-lg-4">
                 <div class="tz-card p-4 mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4 class="fw-bold text-dark mb-0" style="font-size: 16px;">
-                            <i class="bi bi-cart-check text-primary me-2"></i>Mặt Hàng Đã Đặt
-                        </h4>
-                        <span class="text-muted small">Mã đơn: <?= $maDH ?></span>
-                    </div>
+                    <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom">
+                        <i class="bi bi-person-circle text-primary me-2"></i>Thông Tin Khách Mua
+                    </h5>
+                    <div class="mb-2"><strong>Họ tên:</strong> <?= htmlspecialchars($dh['tenKhachHang']) ?></div>
+                    <div class="mb-2"><strong>Số điện thoại:</strong> <span class="font-monospace text-primary"><?= htmlspecialchars($dh['sdtKhach']) ?></span></div>
+                    <div class="mb-2"><strong>Email:</strong> <?= htmlspecialchars($dh['emailKhach'] ?? 'Không có') ?></div>
+                    <div class="mb-3"><strong>Địa chỉ nhận hàng:</strong> <?= htmlspecialchars($dh['diaChiKhach'] ?? 'Mua trực tiếp tại quầy') ?></div>
 
-                    <div class="table-responsive">
+                    <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom pt-2">
+                        <i class="bi bi-info-circle text-primary me-2"></i>Vận Chuyển & Thanh Toán
+                    </h5>
+                    <div class="mb-2"><strong>Kênh bán:</strong> <?= $dh['kenhBan'] === 'TAI_QUAY' ? 'Tại quầy Showroom' : 'Đặt Online' ?></div>
+                    <div class="mb-2"><strong>Hình thức TT:</strong> <span class="font-monospace fw-semibold"><?= htmlspecialchars($dh['phuongThucThanhToan']) ?></span></div>
+                    <div class="mb-2"><strong>Nhân viên phụ trách:</strong> <?= htmlspecialchars($dh['tenNhanVien'] ?? 'Chưa gán') ?></div>
+                    <div class="mb-3"><strong>Thời gian đặt:</strong> <?= date('d/m/Y H:i:s', strtotime($dh['ngayTao'])) ?></div>
+
+                    <!-- Hành động xử lý trạng thái đơn -->
+                    <?php if ($dh['trangThaiDon'] !== 'HOAN_THANH' && $dh['trangThaiDon'] !== 'DA_HUY'): ?>
+                        <div class="border-top pt-3 mt-3 d-flex flex-column gap-2">
+                            <form action="detail.php?id=<?= urlencode($maDH) ?>" method="POST">
+                                <input type="hidden" name="action" value="ship_order">
+                                <button type="submit" class="btn btn-outline-info w-100"><i class="bi bi-truck me-1"></i>Chuyển Đang Giao Hàng</button>
+                            </form>
+                            <form action="detail.php?id=<?= urlencode($maDH) ?>" method="POST">
+                                <input type="hidden" name="action" value="approve_order">
+                                <button type="submit" class="btn btn-success w-100"><i class="bi bi-check2-all me-1"></i>Xác Nhận Hoàn Thành Đơn</button>
+                            </form>
+                            <form action="detail.php?id=<?= urlencode($maDH) ?>" method="POST">
+                                <input type="hidden" name="action" value="cancel_order">
+                                <button type="submit" class="btn btn-outline-danger w-100" data-tz-confirm="Bạn có chắc chắn muốn hủy đơn hàng này? Số lượng tồn kho và serial sẽ được hoàn trả." data-tz-title="Xác nhận hủy đơn">
+                                    <i class="bi bi-x-circle me-1"></i>Hủy Đơn Hàng
+                                </button>
+                            </form>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Cột Phải: Mặt hàng trong đơn & Serial gắn kèm -->
+            <div class="col-lg-8">
+                <div class="tz-card p-4">
+                    <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom">
+                        <i class="bi bi-laptop text-primary me-2"></i>Mặt Hàng Trong Đơn & Gán Serial Máy
+                    </h5>
+
+                    <div class="table-responsive mb-4">
                         <table class="tz-table">
                             <thead>
                                 <tr>
-                                    <th>SẢN PHẨM</th>
-                                    <th>ĐƠN GIÁ</th>
-                                    <th>SỐ LƯỢNG</th>
-                                    <th>THÀNH TIỀN</th>
-                                    <th>GÁN SERIAL/IMEI (XUẤT BÁN)</th>
-                                    <?php if ($statusParam === 'tiep_nhan'): ?>
-                                    <th class="text-end" style="width: 80px;">XÓA</th>
-                                    <?php endif; ?>
+                                    <th>MÃ SP</th>
+                                    <th>TÊN LAPTOP</th>
+                                    <th class="text-center">SỐ LƯỢNG</th>
+                                    <th class="text-end">ĐƠN GIÁ</th>
+                                    <th class="text-end">THÀNH TIỀN</th>
+                                    <th>MÃ SERIAL / IMEI GÁN</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>
-                                        <div class="fw-bold text-dark">Dell XPS 13 9320 Plus</div>
-                                        <small class="text-muted font-monospace">Mã SP: SP01 • BH: 24 tháng</small>
-                                    </td>
-                                    <td>35.990.000 ₫</td>
-                                    <td>
-                                        <?php if ($statusParam === 'tiep_nhan'): ?>
-                                            <input type="number" class="form-control form-control-sm" value="1" min="1" max="5" style="width: 70px;">
-                                        <?php else: ?>
-                                            <span class="fw-bold">1 chiếc</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="fw-bold text-danger">35.990.000 ₫</td>
-                                    <td>
-                                        <!-- BƯỚC GÁN SERIAL XUẤT BÁN -->
-                                        <?php if ($statusParam === 'tiep_nhan'): ?>
-                                            <form action="detail.php?id=<?= $maDH ?>" method="POST" class="d-flex align-items-center gap-2">
-                                                <input type="hidden" name="action" value="assign_serial">
-                                                <select name="maSerial" class="form-select form-select-sm font-monospace" required style="max-width: 200px;">
-                                                    <option value="">-- Chọn Serial trong kho --</option>
-                                                    <option value="SN-DELL-XPS-99201" selected>SN-DELL-XPS-99201 (Trong kho)</option>
-                                                    <option value="SN-DELL-XPS-99202">SN-DELL-XPS-99202 (Trong kho)</option>
-                                                </select>
-                                                <button type="submit" class="btn btn-sm btn-outline-success text-nowrap" title="Gán Serial"><i class="bi bi-check-lg"></i> Gán</button>
-                                            </form>
-                                        <?php else: ?>
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace py-2 px-2">
-                                                <i class="bi bi-upc-scan me-1"></i>SN-DELL-XPS-99201 (Đã bán)
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <?php if ($statusParam === 'tiep_nhan'): ?>
-                                    <td class="text-end">
-                                        <button class="btn btn-sm btn-outline-danger" title="Xóa sản phẩm (xoaSanPhamKhoiDon)"><i class="bi bi-trash3"></i></button>
-                                    </td>
-                                    <?php endif; ?>
-                                </tr>
+                                <?php
+                                if ($resItems && $resItems->num_rows > 0) {
+                                    while ($item = $resItems->fetch_assoc()) {
+                                        $idCT = $item['id'];
+                                        $maSP = $item['maSP'];
+
+                                        // Lấy thông tin laptop từ bảng sanpham
+                                        $tenSP = $maSP;
+                                        $thongSoKyThuat = '';
+                                        $resSP = $conn->query("SELECT * FROM sanpham WHERE maSP = '$maSP'");
+                                        if ($resSP && $resSP->num_rows > 0) {
+                                            $rowSP = $resSP->fetch_assoc();
+                                            $tenSP = $rowSP['tenSP'];
+                                            $thongSoKyThuat = $rowSP['thongSoKyThuat'];
+                                        }
+
+                                        // Lấy các serial đã gán cho dòng chi tiết này
+                                        $resSer = $conn->query("SELECT maSerial_IMEI, trangThai FROM serialsanpham WHERE idChiTietDonHang = $idCT");
+                                        $serialsGaned = [];
+                                        if ($resSer && $resSer->num_rows > 0) {
+                                            while ($s = $resSer->fetch_assoc()) {
+                                                $serialsGaned[] = $s['maSerial_IMEI'];
+                                            }
+                                        }
+
+                                        // Lấy danh sách serial còn trong kho để gán nếu thiếu
+                                        $resAvailable = $conn->query("SELECT maSerial_IMEI FROM serialsanpham WHERE maSP = '$maSP' AND trangThai = 'Trong kho' AND idChiTietDonHang IS NULL LIMIT 10");
+                                ?>
+                                        <tr>
+                                            <td><span class="badge bg-light text-dark border font-monospace"><?= htmlspecialchars($maSP) ?></span></td>
+                                            <td>
+                                                <div class="fw-bold text-dark"><?= htmlspecialchars($tenSP) ?></div>
+                                                <small class="text-muted"><?= htmlspecialchars($thongSoKyThuat) ?></small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-dark"><?= $item['soLuong'] ?> chiếc</div>
+                                                <small class="text-muted" style="font-size: 11px;">
+                                                    (Kho hiện còn: <strong class="<?= ($rowSP['soLuongTon'] ?? 0) <= 0 ? 'text-danger' : 'text-success' ?>"><?= (int)($rowSP['soLuongTon'] ?? 0) ?></strong>)
+                                                </small>
+                                            </td>
+                                            <td class="text-end"><?= number_format($item['donGia'], 0, ',', '.') ?> ₫</td>
+                                            <td class="text-end fw-bold text-danger"><?= number_format($item['thanhTien'], 0, ',', '.') ?> ₫</td>
+                                            <td>
+                                                <?php if (!empty($serialsGaned)): ?>
+                                                    <?php foreach ($serialsGaned as $ser): ?>
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace d-block mb-1">
+                                                            <i class="bi bi-upc-scan me-1"></i><?= htmlspecialchars($ser) ?>
+                                                        </span>
+                                                    <?php endforeach; ?>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning-subtle text-warning border mb-1">Chưa gán Serial</span>
+                                                <?php endif; ?>
+
+                                                <?php if (count($serialsGaned) < $item['soLuong'] && $dh['trangThaiDon'] !== 'DA_HUY'): ?>
+                                                    <form action="detail.php?id=<?= urlencode($maDH) ?>" method="POST" class="d-flex gap-1 mt-1">
+                                                        <input type="hidden" name="action" value="assign_serial">
+                                                        <input type="hidden" name="idChiTietDonHang" value="<?= $idCT ?>">
+                                                        <select name="maSerial" class="form-select form-select-sm font-monospace" required style="width: 160px;">
+                                                            <option value="">-- Chọn Serial kho --</option>
+                                                            <?php
+                                                            if ($resAvailable && $resAvailable->num_rows > 0) {
+                                                                while ($av = $resAvailable->fetch_assoc()) {
+                                                                    echo "<option value='{$av['maSerial_IMEI']}'>{$av['maSerial_IMEI']}</option>";
+                                                                }
+                                                            }
+                                                            ?>
+                                                        </select>
+                                                        <button type="submit" class="btn btn-sm btn-tz-primary px-2" title="Gán Serial"><i class="bi bi-plus-lg"></i></button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                <?php
+                                    }
+                                }
+                                ?>
                             </tbody>
                         </table>
                     </div>
-                </div>
 
-                <!-- Các nút hành động quy trình -->
-                <div class="tz-card p-4">
-                    <h5 class="fw-bold text-dark mb-3" style="font-size: 15px;">Thao Tác Điều Phối Đơn Hàng</h5>
-                    
-                    <div class="d-flex flex-wrap gap-2">
-                        <?php if ($statusParam === 'tiep_nhan'): ?>
-                            <!-- Nút DUYỆT ĐƠN HÀNG -->
-                            <form action="detail.php?id=<?= $maDH ?>" method="POST">
-                                <input type="hidden" name="action" value="approve_order">
-                                <button type="submit" class="btn btn-tz-primary py-2 px-3 fw-bold" data-tz-confirm="Hệ thống sẽ duyệt đơn hàng <?= $maDH ?> và tự động trừ số lượng tồn kho sản phẩm." data-tz-title="Xác nhận duyệt đơn hàng" data-tz-type="primary" data-tz-btn-text="Xác nhận duyệt">
-                                    <i class="bi bi-check2-circle me-1"></i>DUYỆT ĐƠN HÀNG
-                                </button>
-                            </form>
-                        <?php endif; ?>
-
-                        <?php if ($statusParam === 'da_duyet' || $statusParam === 'van_chuyen'): ?>
-                            <!-- Cập nhật trạng thái vận chuyển -->
-                            <form action="detail.php?id=<?= $maDH ?>" method="POST" class="d-inline-flex gap-2">
-                                <input type="hidden" name="action" value="update_shipping">
-                                <select name="trangThaiMoi" class="form-select form-select-sm" style="width: 200px;">
-                                    <option value="van_chuyen" <?= $statusParam === 'van_chuyen' ? 'selected' : '' ?>>Đang vận chuyển</option>
-                                    <option value="hoan_thanh">Hoàn thành (Đã giao)</option>
-                                </select>
-                                <button type="submit" class="btn btn-sm btn-outline-primary">Cập nhật vận chuyển</button>
-                            </form>
-
-                            <!-- Nút Xuất Hóa Đơn -->
-                            <a href="../hoa-don/detail.php?maDH=<?= $maDH ?>" class="btn btn-outline-success">
-                                <i class="bi bi-receipt me-1"></i>Xuất Hóa Đơn
-                            </a>
-
-                            <!-- Nút Tạo Phiếu Bảo Hành -->
-                            <a href="../bao-hanh/create.php?maDH=<?= $maDH ?>&serial=SN-DELL-XPS-99201" class="btn btn-outline-info">
-                                <i class="bi bi-shield-check me-1"></i>Tạo Phiếu Bảo Hành
-                            </a>
-                        <?php endif; ?>
-
-                        <?php if ($statusParam !== 'da_huy' && $statusParam !== 'hoan_thanh'): ?>
-                            <!-- Nút HỦY ĐƠN HÀNG -->
-                            <button type="button" class="btn btn-outline-danger ms-auto" data-bs-toggle="modal" data-bs-target="#modalHuyDon">
-                                <i class="bi bi-x-circle me-1"></i>Hủy Đơn Hàng
-                            </button>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Cột Phải: Thông tin Khách hàng, Kênh bán, UserDatHang & Thanh toán -->
-            <div class="col-lg-4">
-                <!-- Box 1: Thông tin Kênh bán & Người phụ trách (DonHang) -->
-                <div class="tz-card p-4 mb-4">
-                    <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom" style="font-size: 15px;">
-                        <i class="bi bi-diagram-3 text-primary me-2"></i>Kênh Bán & Phụ Trách
-                    </h5>
-                    <div class="mb-2 d-flex justify-content-between align-items-center">
-                        <span class="text-muted small">Kênh bán (kenhBan):</span>
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold px-2.5 py-1">
-                            <i class="bi bi-globe me-1"></i>ONLINE (Trực tuyến)
-                        </span>
-                    </div>
-                    <div class="mb-2 d-flex justify-content-between align-items-center">
-                        <span class="text-muted small">Người phụ trách (nguoiPhuTrach):</span>
-                        <a href="../tai-khoan/tai-khoan.php?search=TK002" class="text-decoration-none fw-semibold font-monospace small">
-                            <i class="bi bi-person-badge me-1"></i>TK002 (Trần Quản Trị)
-                        </a>
-                    </div>
-                    <div class="mb-0 d-flex justify-content-between align-items-center">
-                        <span class="text-muted small">Khách đặt hàng (maKH):</span>
-                        <a href="../khach-hang/khach-hang.php?search=KH01" class="text-decoration-none fw-bold text-dark small">
-                            Nguyễn Văn An (KH01)
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Box 2: Thông tin mở rộng Đơn Online (UserDatHang - Quan hệ 1..0-1 với DonHang) -->
-                <div class="tz-card p-4 mb-4" style="border-left: 4px solid var(--tz-primary);">
-                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                        <h5 class="fw-bold text-dark mb-0" style="font-size: 15px;">
-                            <i class="bi bi-truck text-primary me-2"></i>Giao Nhận Online (UserDatHang)
-                        </h5>
-                        <span class="badge bg-light text-dark border font-monospace" style="font-size: 11px;">#UDH-01</span>
-                    </div>
-                    
-                    <div class="mb-2">
-                        <span class="text-muted small d-block">Người nhận hàng (tenNguoiNhan):</span>
-                        <strong class="text-dark">Nguyễn Văn An</strong>
-                    </div>
-                    <div class="mb-2">
-                        <span class="text-muted small d-block">SĐT nhận hàng (sdtNhanHang):</span>
-                        <a href="tel:0912345678" class="text-decoration-none fw-semibold">0912 345 678</a>
-                    </div>
-                    <div class="mb-2">
-                        <span class="text-muted small d-block">Địa chỉ giao hàng (diaChiGiaoHang):</span>
-                        <span class="text-secondary small">123 Đường Láng, P. Láng Thượng, Q. Đống Đa, Hà Nội</span>
-                    </div>
-                    <div class="mb-2">
-                        <span class="text-muted small d-block">Ghi chú giao nhận (ghiChuKhachHang):</span>
-                        <span class="text-muted small fst-italic">"Giao giờ hành chính, gọi trước khi đến 15 phút"</span>
-                    </div>
-                    <div class="mb-0 pt-2 border-top">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="text-muted small">Mã GD (maGiaoDichOnline):</span>
-                            <span class="badge bg-light text-dark font-monospace border">VNPAY-99882210</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted small">TT Thanh toán:</span>
-                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>DA_THANH_TOAN</span>
+                    <!-- Tổng kết tiền đơn hàng -->
+                    <div class="row justify-content-end">
+                        <div class="col-md-6">
+                            <div class="bg-light p-3 rounded">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Tổng tiền hàng:</span>
+                                    <span class="fw-bold"><?= number_format($dh['tongTienHang'], 0, ',', '.') ?> ₫</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Voucher giảm giá (<?= htmlspecialchars($dh['tenKM'] ?? 'Không') ?>):</span>
+                                    <span class="text-danger fw-bold">-<?= number_format($dh['tienGiamGia'], 0, ',', '.') ?> ₫</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="text-muted">Phí giao hàng:</span>
+                                    <span><?= number_format($dh['phiVanChuyen'], 0, ',', '.') ?> ₫</span>
+                                </div>
+                                <hr class="my-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold fs-6">Tổng thanh toán:</span>
+                                    <span class="fw-bold fs-5 text-danger"><?= number_format($dh['tongThanhToan'], 0, ',', '.') ?> ₫</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Box 3: Chi Tiết Thanh Toán (DonHang) -->
-                <div class="tz-card p-4">
-                    <h5 class="fw-bold text-dark mb-3 pb-2 border-bottom" style="font-size: 15px;">
-                        <i class="bi bi-wallet2 text-primary me-2"></i>Chi Tiết Thanh Toán (DonHang)
-                    </h5>
-                    
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-secondary small">Tổng tiền hàng (tongTienHang):</span>
-                        <span class="fw-semibold">37.990.000 ₫</span>
-                    </div>
-
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-secondary small">Phí vận chuyển (phiVanChuyen):</span>
-                        <span class="fw-semibold">+ 50.000 ₫</span>
-                    </div>
-
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-secondary small">Voucher KM (maKM: KM2026-T10):</span>
-                        <span class="text-success fw-semibold">- 3.799.000 ₫</span>
-                    </div>
-
-                    <div class="border-top pt-2 mt-2 d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-dark">TỔNG THANH TOÁN:</span>
-                        <span class="fw-bold text-danger fs-5 font-monospace">34.241.000 ₫</span>
-                    </div>
-
-                    <div class="mt-3 p-2 bg-light rounded" style="font-size: 12.5px;">
-                        <div><i class="bi bi-credit-card me-1"></i>Phương thức TT: <strong>Chuyển khoản VNPAY</strong></div>
-                        <div class="mt-1"><i class="bi bi-truck me-1"></i>Phương thức giao: <strong>Giao hàng hỏa tốc</strong></div>
-                    </div>
-
-                    <div class="mt-3 pt-3 border-top text-center">
-                        <a href="../hoa-don/detail.php?maDH=<?= $maDH ?>" class="btn btn-outline-success btn-sm w-100 fw-semibold">
-                            <i class="bi bi-receipt me-1"></i>Xem Hóa Đơn Xuất (HoaDon.maDH)
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal Hủy Đơn Hàng -->
-        <div class="modal fade" id="modalHuyDon" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow">
-                    <div class="modal-header bg-danger text-white">
-                        <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Hủy Đơn Hàng (<?= $maDH ?>)</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form action="detail.php?id=<?= $maDH ?>" method="POST">
-                        <input type="hidden" name="action" value="cancel_order">
-                        <div class="modal-body p-4">
-                            <p class="text-danger fw-semibold mb-2">Cảnh báo: Hành động này sẽ hủy đơn và thực hiện 2 thao tác tự động:</p>
-                            <ol class="small text-muted mb-3">
-                                <li>Hoàn trả lại số lượng sản phẩm vào kho hàng.</li>
-                                <li>Đưa mã Serial của sản phẩm về lại trạng thái sẵn sàng xuất bán.</li>
-                            </ol>
-                            
-                            <label class="form-label fw-semibold">Lý do hủy đơn <span class="text-danger">*</span></label>
-                            <textarea name="lyDo" class="form-control" rows="3" placeholder="Nhập lý do khách hủy hoặc cửa hàng từ chối..." required></textarea>
-                        </div>
-                        <div class="modal-footer bg-light border-top">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                            <button type="submit" class="btn btn-danger"><i class="bi bi-trash3 me-1"></i>Xác nhận Hủy Đơn Hàng</button>
-                        </div>
-                    </form>
                 </div>
             </div>
         </div>

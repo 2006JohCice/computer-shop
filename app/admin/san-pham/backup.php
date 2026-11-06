@@ -6,330 +6,327 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
 ?>
 
 <?php
-    include __DIR__ . "/../../config/database.php";
+include __DIR__ . "/../../config/database.php";
 
-    $conn = @new mysqli($servername, $username, $password, $dbname);
+$conn = @new mysqli($servername, $username, $password, $dbname);
 
-    $totalActive = 0;
-    $totalInStock = 0;
-    $totalOutOfStock = 0;
-    $totalTrash = 0;
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    $maSP = $_POST['maSP'] ?? '';
 
-    if ($conn && !$conn->connect_error) {
-        // 1. Tổng sản phẩm hiện hành
-        $sqlTotalActive = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 0";
-        $resultTotalActive = $conn->query($sqlTotalActive);
-        if ($resultTotalActive && $resultTotalActive->num_rows > 0) {
-            $row = $resultTotalActive->fetch_assoc();
-            $totalActive = $row['total'];
+    if ($action === 'restore' && !empty($maSP)) {
+        $sqlRestore = "UPDATE sanpham SET isDeleted = 0 WHERE maSP = '$maSP'";
+        if ($conn->query($sqlRestore)) {
+            echo "<script>window.location.href='backup.php';</script>";
+            exit;
+        } else {
+            echo "<script>alert('Lỗi khi khôi phục sản phẩm: " . addslashes($conn->error) . "');</script>";
         }
-
-        // 2. Tồn kho an toàn
-        $sqlInStock = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 0 AND soLuongTon > 0";
-        $resultInStock = $conn->query($sqlInStock);
-        if ($resultInStock && $resultInStock->num_rows > 0) {
-            $row = $resultInStock->fetch_assoc();
-            $totalInStock = $row['total'];
+    } elseif ($action === 'force_delete' && !empty($maSP)) {
+        // Tạm thời tắt ràng buộc khóa ngoại và dọn sạch các bảng liên quan
+        $conn->query("SET FOREIGN_KEY_CHECKS = 0");
+        $conn->query("DELETE FROM giohang WHERE maSP = '$maSP'");
+        $conn->query("DELETE FROM serialsanpham WHERE maSP = '$maSP'");
+        $conn->query("DELETE FROM chitietnhap WHERE maSP = '$maSP'");
+        $conn->query("DELETE FROM chitietdonhang WHERE maSP = '$maSP'");
+        $sqlDelete = "DELETE FROM sanpham WHERE maSP = '$maSP'";
+        $res = $conn->query($sqlDelete);
+        $conn->query("SET FOREIGN_KEY_CHECKS = 1");
+        if ($res) {
+            echo "<script>window.location.href='backup.php';</script>";
+            exit;
+        } else {
+            echo "<script>alert('Lỗi khi xóa vĩnh viễn: " . addslashes($conn->error) . "');</script>";
         }
-
-        // 3. Cảnh báo hết hàng
-        $sqlOutOfStock = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 0 AND soLuongTon = 0";
-        $resultOutOfStock = $conn->query($sqlOutOfStock);
-        if ($resultOutOfStock && $resultOutOfStock->num_rows > 0) {
-            $row = $resultOutOfStock->fetch_assoc();
-            $totalOutOfStock = $row['total'];
+    } elseif ($action === 'clear_all') {
+        // Dọn sạch toàn bộ thùng rác
+        $conn->query("SET FOREIGN_KEY_CHECKS = 0");
+        $conn->query("DELETE FROM giohang WHERE maSP IN (SELECT maSP FROM sanpham WHERE isDeleted = 1)");
+        $conn->query("DELETE FROM serialsanpham WHERE maSP IN (SELECT maSP FROM sanpham WHERE isDeleted = 1)");
+        $conn->query("DELETE FROM chitietnhap WHERE maSP IN (SELECT maSP FROM sanpham WHERE isDeleted = 1)");
+        $conn->query("DELETE FROM chitietdonhang WHERE maSP IN (SELECT maSP FROM sanpham WHERE isDeleted = 1)");
+        $sqlClear = "DELETE FROM sanpham WHERE isDeleted = 1";
+        $res = $conn->query($sqlClear);
+        $conn->query("SET FOREIGN_KEY_CHECKS = 1");
+        if ($res) {
+            echo "<script>window.location.href='backup.php';</script>";
+            exit;
+        } else {
+            echo "<script>alert('Lỗi khi dọn thùng rác: " . addslashes($conn->error) . "');</script>";
         }
-
-        // 4. Thùng rác
-        $sqlTrash = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 1";
-        $resultTrash = $conn->query($sqlTrash);
-        if ($resultTrash && $resultTrash->num_rows > 0) {
-            $row = $resultTrash->fetch_assoc();
-            $totalTrash = $row['total'];
+    } elseif ($action === 'batch_restore' && !empty($_POST['selected_ids'])) {
+        $ids = explode(',', $_POST['selected_ids']);
+        foreach ($ids as $id) {
+            $id = trim($id);
+            if (!empty($id)) {
+                $conn->query("UPDATE sanpham SET isDeleted = 0 WHERE maSP = '$id'");
+            }
         }
+        echo "<script>window.location.href='backup.php';</script>";
+        exit;
+    } elseif ($action === 'batch_delete' && !empty($_POST['selected_ids'])) {
+        $ids = explode(',', $_POST['selected_ids']);
+        $conn->query("SET FOREIGN_KEY_CHECKS = 0");
+        foreach ($ids as $id) {
+            $id = trim($id);
+            if (!empty($id)) {
+                $conn->query("DELETE FROM giohang WHERE maSP = '$id'");
+                $conn->query("DELETE FROM serialsanpham WHERE maSP = '$id'");
+                $conn->query("DELETE FROM chitietnhap WHERE maSP = '$id'");
+                $conn->query("DELETE FROM chitietdonhang WHERE maSP = '$id'");
+                $conn->query("DELETE FROM sanpham WHERE maSP = '$id'");
+            }
+        }
+        $conn->query("SET FOREIGN_KEY_CHECKS = 1");
+        echo "<script>window.location.href='backup.php';</script>";
+        exit;
+    }
+}
+
+$totalActive = 0;
+$totalInStock = 0;
+$totalOutOfStock = 0;
+$totalTrash = 0;
+
+if ($conn && !$conn->connect_error) {
+    // 1. Tổng sản phẩm hiện hành
+    $sqlTotalActive = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 0";
+    $resultTotalActive = $conn->query($sqlTotalActive);
+    if ($resultTotalActive && $resultTotalActive->num_rows > 0) {
+        $row = $resultTotalActive->fetch_assoc();
+        $totalActive = $row['total'];
     }
 
-    // Danh sách sản phẩm mẫu chuẩn giao diện thực tế (nếu CSDL chưa có dữ liệu xóa)
-    $sampleTrashProducts = [
-        [
-            'maSP' => 'SP0002',
-            'tenSP' => 'Nhat',
-            'thongSoKyThuat' => 'CPU: s | RAM: s | SSD: | VGA: | Màn hình: s | Trọng lượng: s',
-            'tenDM' => 'Laptop Văn phòng - Học tập',
-            'tenTH' => 'Lenovo',
-            'giaBan' => 3,
-            'soLuongTon' => 3,
-            'thoiGianBaoHanh' => 24,
-            'viTriKho' => '33333333',
-            'trangThai' => 1,
-            'deleted_time' => '10 phút trước'
-        ],
-        [
-            'maSP' => 'SP00032',
-            'tenSP' => '11111111',
-            'thongSoKyThuat' => 'CPU: 1 | RAM: 1 | SSD: 1 | VGA: 1 | Màn hình: 1 | Trọng lượng: 1',
-            'tenDM' => 'Laptop Gaming',
-            'tenTH' => 'Apple',
-            'giaBan' => 1,
-            'soLuongTon' => 1,
-            'thoiGianBaoHanh' => 24,
-            'viTriKho' => '33333333',
-            'trangThai' => 1,
-            'deleted_time' => '2 giờ trước'
-        ],
-        [
-            'maSP' => 'SP001',
-            'tenSP' => 'ASUS TUF Gaming F15 FX507ZC4',
-            'thongSoKyThuat' => 'CPU: Intel Core i5-12500H | RAM: 16GB DDR4 | SSD: 512GB NVMe | VGA: RTX 3050 4GB | Màn hình: 15.6 inch FHD 144Hz',
-            'tenDM' => 'Laptop Gaming',
-            'tenTH' => 'ASUS',
-            'giaBan' => 21990000,
-            'soLuongTon' => 1,
-            'thoiGianBaoHanh' => 24,
-            'viTriKho' => 'Kệ A1 - Tầng 1',
-            'trangThai' => 1,
-            'deleted_time' => '1 ngày trước'
-        ],
-        [
-            'maSP' => 'SP002',
-            'tenSP' => 'Lenovo LOQ 15IAX9',
-            'thongSoKyThuat' => 'CPU: Intel Core i5-12450HX | RAM: 16GB DDR5 | SSD: 512GB | VGA: RTX 3050 6GB | Màn hình: 15.6 inch FHD 144Hz 100% sRGB',
-            'tenDM' => 'Laptop Gaming',
-            'tenTH' => 'Lenovo',
-            'giaBan' => 20490000,
-            'soLuongTon' => 1,
-            'thoiGianBaoHanh' => 24,
-            'viTriKho' => 'Kệ A2 - Tầng 1',
-            'trangThai' => 1,
-            'deleted_time' => '3 ngày trước'
-        ],
-        [
-            'maSP' => 'SP004',
-            'tenSP' => 'Apple MacBook Air M3 13 inch 2024',
-            'thongSoKyThuat' => 'Chip: Apple M3 8-core CPU, 8-core GPU | RAM: 16GB Unified | SSD: 256GB | Màn hình: 13.6 inch Liquid Retina',
-            'tenDM' => 'MacBook',
-            'tenTH' => 'Apple',
-            'giaBan' => 27990000,
-            'soLuongTon' => 1,
-            'thoiGianBaoHanh' => 12,
-            'viTriKho' => 'Tủ Kính C1 - Tầng 1',
-            'trangThai' => 1,
-            'deleted_time' => '5 ngày trước'
-        ],
-        [
-            'maSP' => 'SP005',
-            'tenSP' => 'MSI Creator M16 HX',
-            'thongSoKyThuat' => 'CPU: Intel Core i7-14700HX | RAM: 32GB DDR5 | SSD: 1TB | VGA: RTX 4060 8GB | Màn hình: 16 inch QHD+ 240Hz',
-            'tenDM' => 'Laptop Đồ họa – Kỹ thuật',
-            'tenTH' => 'MSI',
-            'giaBan' => 38990000,
-            'soLuongTon' => 0,
-            'thoiGianBaoHanh' => 24,
-            'viTriKho' => 'Kệ D1 - Tầng 2',
-            'trangThai' => 0,
-            'deleted_time' => '1 tuần trước'
-        ]
-    ];
+    // 2. Tồn kho an toàn
+    $sqlInStock = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 0 AND soLuongTon > 0";
+    $resultInStock = $conn->query($sqlInStock);
+    if ($resultInStock && $resultInStock->num_rows > 0) {
+        $row = $resultInStock->fetch_assoc();
+        $totalInStock = $row['total'];
+    }
 
-    // Lấy dữ liệu thật nếu có trong CSDL
-    $dbTrashProducts = [];
-    if ($conn && !$conn->connect_error) {
-        $sqlProducts = "SELECT sp.*, dm.tenDM, th.tenTH 
+    // 3. Cảnh báo hết hàng
+    $sqlOutOfStock = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 0 AND soLuongTon = 0";
+    $resultOutOfStock = $conn->query($sqlOutOfStock);
+    if ($resultOutOfStock && $resultOutOfStock->num_rows > 0) {
+        $row = $resultOutOfStock->fetch_assoc();
+        $totalOutOfStock = $row['total'];
+    }
+
+    // 4. Thùng rác
+    $sqlTrash = "SELECT COUNT(*) AS total FROM sanpham WHERE isDeleted = 1";
+    $resultTrash = $conn->query($sqlTrash);
+    if ($resultTrash && $resultTrash->num_rows > 0) {
+        $row = $resultTrash->fetch_assoc();
+        $totalTrash = $row['total'];
+    }
+}
+
+
+// Lấy dữ liệu thật nếu có trong CSDL
+$dbTrashProducts = [];
+if ($conn && !$conn->connect_error) {
+    $sqlProducts = "SELECT sp.*, dm.tenDM, th.tenTH 
                         FROM sanpham sp 
                         LEFT JOIN danhmuc dm ON sp.maDM = dm.maDM
                         LEFT JOIN thuonghieu th ON sp.maTH = th.maTH
                         WHERE sp.isDeleted = 1";
-        $resProd = $conn->query($sqlProducts);
-        if ($resProd && $resProd->num_rows > 0) {
-            while ($r = $resProd->fetch_assoc()) {
-                $r['deleted_time'] = 'Vừa xóa';
-                $dbTrashProducts[] = $r;
-            }
+    $resProd = $conn->query($sqlProducts);
+    if ($resProd && $resProd->num_rows > 0) {
+        while ($r = $resProd->fetch_assoc()) {
+            $r['deleted_time'] = 'Vừa xóa';
+            $dbTrashProducts[] = $r;
         }
     }
+}
 
-    $trashList = !empty($dbTrashProducts) ? $dbTrashProducts : $sampleTrashProducts;
-    $totalTrash = count($trashList);
+$trashList = $dbTrashProducts;
+$totalTrash = count($trashList);
 ?>
 
 <style>
-/* ====================================================================
+    /* 
    CSS GIAO DIỆN POPUP / THẺ THÙNG RÁC THAY THẾ TABLE (UI/UX PRO MAX)
    Vị trí: Ngay dưới 2 tab, giữ nguyên 100% cấu trúc giao diện trang
-   ==================================================================== */
+    */
 
-/* Khung bọc Thùng rác thay thế table */
-.tz-trash-wrapper {
-    background: #ffffff;
-    border: 1px solid var(--tz-border);
-    border-radius: var(--tz-radius-md);
-    box-shadow: var(--tz-shadow);
-    padding: 20px;
-}
+    /* Khung bọc Thùng rác thay thế table */
+    .tz-trash-wrapper {
+        background: #ffffff;
+        border: 1px solid var(--tz-border);
+        border-radius: var(--tz-radius-md);
+        box-shadow: var(--tz-shadow);
+        padding: 20px;
+    }
 
-/* Thanh điều khiển trên đỉnh Thùng rác */
-.tz-trash-header-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding-bottom: 16px;
-    margin-bottom: 16px;
-    border-bottom: 1px solid #f1f5f9;
-}
+    /* Thanh điều khiển trên đỉnh Thùng rác */
+    .tz-trash-header-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 16px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid #f1f5f9;
+    }
 
-/* Thẻ Popup Card cho từng sản phẩm đã xóa */
-.tz-popup-item {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 14px 18px;
-    margin-bottom: 12px;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    position: relative;
-}
+    /* Thẻ Popup Card cho từng sản phẩm đã xóa */
+    .tz-popup-item {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 12px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        position: relative;
+    }
 
-.tz-popup-item:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.05);
-    transform: translateY(-1px);
-    background: #fafcff;
-}
+    .tz-popup-item:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.05);
+        transform: translateY(-1px);
+        background: #fafcff;
+    }
 
-.tz-popup-item.selected {
-    border-color: #2563eb;
-    background: #eff6ff;
-}
+    .tz-popup-item.selected {
+        border-color: #2563eb;
+        background: #eff6ff;
+    }
 
-/* Thumbnail icon thiết bị */
-.tz-popup-thumb {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    background: #f1f5f9;
-    color: #475569;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
-}
+    /* Thumbnail icon thiết bị */
+    .tz-popup-thumb {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: #f1f5f9;
+        color: #475569;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
 
-.tz-popup-item:hover .tz-popup-thumb {
-    background: #e0e7ff;
-    color: #2563eb;
-}
+    .tz-popup-item:hover .tz-popup-thumb {
+        background: #e0e7ff;
+        color: #2563eb;
+    }
 
-/* Nút Khôi phục trong Popup */
-.btn-tz-restore {
-    background-color: #ecfdf5;
-    color: #059669;
-    border: 1px solid #a7f3d0;
-    font-weight: 600;
-    font-size: 13px;
-    padding: 6px 14px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.2s;
-    cursor: pointer;
-}
-.btn-tz-restore:hover {
-    background-color: #059669;
-    color: #ffffff;
-    border-color: #059669;
-    box-shadow: 0 4px 10px rgba(5, 150, 105, 0.2);
-}
+    /* Nút Khôi phục trong Popup */
+    .btn-tz-restore {
+        background-color: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+        font-weight: 600;
+        font-size: 13px;
+        padding: 6px 14px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
 
-/* Nút Xóa vĩnh viễn trong Popup */
-.btn-tz-force-del {
-    background-color: #fef2f2;
-    color: #dc2626;
-    border: 1px solid #fecaca;
-    font-weight: 600;
-    font-size: 13px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.2s;
-    cursor: pointer;
-}
-.btn-tz-force-del:hover {
-    background-color: #dc2626;
-    color: #ffffff;
-    border-color: #dc2626;
-    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2);
-}
+    .btn-tz-restore:hover {
+        background-color: #059669;
+        color: #ffffff;
+        border-color: #059669;
+        box-shadow: 0 4px 10px rgba(5, 150, 105, 0.2);
+    }
 
-/* Nút Xem chi tiết Popup */
-.btn-tz-detail {
-    background-color: #f8fafc;
-    color: #475569;
-    border: 1px solid #e2e8f0;
-    font-weight: 600;
-    font-size: 13px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    transition: all 0.2s;
-    cursor: pointer;
-}
-.btn-tz-detail:hover {
-    background-color: #e2e8f0;
-    color: #0f172a;
-}
+    /* Nút Xóa vĩnh viễn trong Popup */
+    .btn-tz-force-del {
+        background-color: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+        font-weight: 600;
+        font-size: 13px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
 
-/* Nhãn thời gian xóa */
-.tz-badge-trash-time {
-    font-size: 11.5px;
-    color: #dc2626;
-    background: #fef2f2;
-    border: 1px solid #fee2e2;
-    border-radius: 6px;
-    padding: 2px 7px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
+    .btn-tz-force-del:hover {
+        background-color: #dc2626;
+        color: #ffffff;
+        border-color: #dc2626;
+        box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2);
+    }
 
-/* Switcher chế độ xem: Thẻ vs Bảng */
-.tz-view-switcher {
-    background: #f1f5f9;
-    border-radius: 8px;
-    padding: 3px;
-    display: inline-flex;
-}
-.tz-view-btn {
-    border: none;
-    background: transparent;
-    padding: 4px 10px;
-    font-size: 12.5px;
-    font-weight: 600;
-    color: #64748b;
-    border-radius: 6px;
-    transition: all 0.15s ease;
-}
-.tz-view-btn.active {
-    background: #ffffff;
-    color: #0f172a;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
+    /* Nút Xem chi tiết Popup */
+    .btn-tz-detail {
+        background-color: #f8fafc;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        font-weight: 600;
+        font-size: 13px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
 
-/* Animation khi xóa/khôi phục */
-.tz-item-fade {
-    opacity: 0;
-    transform: scale(0.96);
-    transition: all 0.3s ease;
-}
+    .btn-tz-detail:hover {
+        background-color: #e2e8f0;
+        color: #0f172a;
+    }
+
+    /* Nhãn thời gian xóa */
+    .tz-badge-trash-time {
+        font-size: 11.5px;
+        color: #dc2626;
+        background: #fef2f2;
+        border: 1px solid #fee2e2;
+        border-radius: 6px;
+        padding: 2px 7px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Switcher chế độ xem: Thẻ vs Bảng */
+    .tz-view-switcher {
+        background: #f1f5f9;
+        border-radius: 8px;
+        padding: 3px;
+        display: inline-flex;
+    }
+
+    .tz-view-btn {
+        border: none;
+        background: transparent;
+        padding: 4px 10px;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #64748b;
+        border-radius: 6px;
+        transition: all 0.15s ease;
+    }
+
+    .tz-view-btn.active {
+        background: #ffffff;
+        color: #0f172a;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Animation khi xóa/khôi phục */
+    .tz-item-fade {
+        opacity: 0;
+        transform: scale(0.96);
+        transition: all 0.3s ease;
+    }
 </style>
 
 <div class="tz-main-wrapper">
@@ -477,11 +474,11 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
             <span class="text-secondary small"><i class="bi bi-clock-history me-1"></i>Dữ liệu đồng bộ tức thì</span>
         </div>
 
-        <!-- ==============================================================================
+        <!-- ==========
              VỊ TRÍ Ở DƯỚI NÀY: GIAO DIỆN POPUP / CARDS THÙNG RÁC THAY THẾ CHO TABLE CŨ
-             ============================================================================== -->
+             ========== -->
         <div class="tz-trash-wrapper">
-            
+
             <!-- Thanh tác vụ trên đỉnh danh sách thùng rác -->
             <div class="tz-trash-header-bar">
                 <div class="d-flex align-items-center gap-3">
@@ -492,7 +489,7 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                         </label>
                     </div>
                     <span class="text-muted small" id="selectedText">Đã chọn: 0 sản phẩm</span>
-                    
+
                     <!-- Nút thao tác hàng loạt -->
                     <button type="button" class="btn btn-sm btn-outline-success d-none" id="btnBatchRestore">
                         <i class="bi bi-arrow-counterclockwise me-1"></i>Khôi phục đã chọn
@@ -500,6 +497,11 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                     <button type="button" class="btn btn-sm btn-outline-danger d-none" id="btnBatchDelete">
                         <i class="bi bi-trash3 me-1"></i>Xóa vĩnh viễn đã chọn
                     </button>
+                    <!-- Form ẩn thực thi thao tác hàng loạt -->
+                    <form method="POST" action="backup.php" id="formBatchAction" class="d-none">
+                        <input type="hidden" name="action" id="batchActionInput" value="">
+                        <input type="hidden" name="selected_ids" id="batchSelectedIdsInput" value="">
+                    </form>
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
@@ -514,15 +516,21 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                     </div>
 
                     <!-- Nút Dọn sạch thùng rác -->
-                    <button type="button" class="btn btn-sm btn-outline-danger" id="btnClearAllTrash" title="Xóa toàn bộ sản phẩm trong thùng rác">
-                        <i class="bi bi-x-circle me-1"></i>Dọn sạch thùng rác
-                    </button>
+                    <form method="POST" action="backup.php" class="d-inline">
+                        <input type="hidden" name="action" value="clear_all">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa toàn bộ sản phẩm trong thùng rác"
+                            data-tz-confirm="CẢNH BÁO: Toàn bộ sản phẩm trong thùng rác sẽ bị xóa vĩnh viễn khỏi hệ thống! Thao tác này không thể hoàn tác."
+                            data-tz-title="Dọn sạch thùng rác"
+                            data-tz-type="danger">
+                            <i class="bi bi-x-circle me-1"></i>Dọn sạch thùng rác
+                        </button>
+                    </form>
                 </div>
             </div>
 
             <!-- CHẾ ĐỘ 1: VIEW DẠNG THẺ POPUP (THAY THẾ CHO TABLE THÔ CỨNG) -->
             <div id="trashCardsView">
-                <?php foreach ($trashList as $item): 
+                <?php foreach ($trashList as $item):
                     $giaBanFormatted = number_format($item['giaBan'] ?? 0, 0, ',', '.');
                     $brand = $item['tenTH'] ?? 'Khác';
                     $cat = $item['tenDM'] ?? 'Khác';
@@ -533,77 +541,91 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                     $viTri = $item['viTriKho'] ?? '';
                     $baoHanh = $item['thoiGianBaoHanh'] ?? 24;
                 ?>
-                <div class="tz-popup-item" data-masp="<?= htmlspecialchars($maSP) ?>" data-tensp="<?= htmlspecialchars(strtolower($tenSP)) ?>" data-brand="<?= htmlspecialchars(strtolower($brand)) ?>" data-cat="<?= htmlspecialchars(strtolower($cat)) ?>" data-status="<?= $item['trangThai'] ?>">
-                    
-                    <!-- Checkbox chọn mục -->
-                    <div class="form-check mb-0">
-                        <input class="form-check-input item-cb" type="checkbox" value="<?= htmlspecialchars($maSP) ?>" style="cursor: pointer;">
-                    </div>
+                    <div class="tz-popup-item" data-masp="<?= htmlspecialchars($maSP) ?>" data-tensp="<?= htmlspecialchars(strtolower($tenSP)) ?>" data-brand="<?= htmlspecialchars(strtolower($brand)) ?>" data-cat="<?= htmlspecialchars(strtolower($cat)) ?>" data-status="<?= $item['trangThai'] ?>">
 
-                    <!-- Thumbnail icon nhận diện thiết bị -->
-                    <div class="tz-popup-thumb">
-                        <?php if (strtolower($brand) === 'apple'): ?>
-                            <i class="bi bi-apple"></i>
-                        <?php elseif (in_array(strtolower($brand), ['asus', 'msi'])): ?>
-                            <i class="bi bi-controller"></i>
-                        <?php else: ?>
-                            <i class="bi bi-laptop"></i>
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- Thông tin chi tiết sản phẩm -->
-                    <div class="flex-grow-1" style="min-width: 0;">
-                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                            <span class="badge bg-light text-dark border font-monospace fw-bold px-2"><?= htmlspecialchars($maSP) ?></span>
-                            <span class="fw-bold text-dark text-truncate" style="font-size: 14.5px;"><?= htmlspecialchars($tenSP) ?></span>
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold" style="font-size: 11px;"><?= htmlspecialchars($brand) ?></span>
-                            <span class="badge bg-light text-secondary border" style="font-size: 11px;"><?= htmlspecialchars($cat) ?></span>
-                            <span class="tz-badge-trash-time"><i class="bi bi-clock-history"></i><?= htmlspecialchars($item['deleted_time'] ?? 'Đã xóa') ?></span>
+                        <!-- Checkbox chọn mục -->
+                        <div class="form-check mb-0">
+                            <input class="form-check-input item-cb" type="checkbox" value="<?= htmlspecialchars($maSP) ?>" style="cursor: pointer;">
                         </div>
 
-                        <!-- Dòng cấu hình kỹ thuật -->
-                        <div class="text-muted text-truncate mb-2" style="font-size: 12px;" title="<?= htmlspecialchars($thongSo) ?>">
-                            <i class="bi bi-cpu me-1 text-primary"></i><?= htmlspecialchars($thongSo) ?>
-                        </div>
-
-                        <!-- Giá bán, tồn kho, vị trí, bảo hành -->
-                        <div class="d-flex flex-wrap align-items-center gap-3" style="font-size: 12.5px;">
-                            <span class="fw-bold text-danger fs-6"><?= $giaBanFormatted ?> ₫</span>
-                            
-                            <?php if ($inStock > 0): ?>
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold">
-                                    <?= $inStock ?> chiếc
-                                </span>
+                        <!-- Thumbnail icon nhận diện thiết bị -->
+                        <div class="tz-popup-thumb">
+                            <?php if (strtolower($brand) === 'apple'): ?>
+                                <i class="bi bi-apple"></i>
+                            <?php elseif (in_array(strtolower($brand), ['asus', 'msi'])): ?>
+                                <i class="bi bi-controller"></i>
                             <?php else: ?>
-                                <span class="badge bg-danger text-white fw-bold px-2 py-0.5">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>HẾT HÀNG (0)
-                                </span>
+                                <i class="bi bi-laptop"></i>
                             <?php endif; ?>
-
-                            <span class="text-muted"><i class="bi bi-shield-check me-1"></i><?= $baoHanh ?> tháng</span>
-                            <span class="text-muted"><i class="bi bi-geo-alt-fill text-danger me-1"></i><?= htmlspecialchars($viTri) ?></span>
                         </div>
+
+                        <!-- Thông tin chi tiết sản phẩm -->
+                        <div class="flex-grow-1" style="min-width: 0;">
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                <span class="badge bg-light text-dark border font-monospace fw-bold px-2"><?= htmlspecialchars($maSP) ?></span>
+                                <span class="fw-bold text-dark text-truncate" style="font-size: 14.5px;"><?= htmlspecialchars($tenSP) ?></span>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold" style="font-size: 11px;"><?= htmlspecialchars($brand) ?></span>
+                                <span class="badge bg-light text-secondary border" style="font-size: 11px;"><?= htmlspecialchars($cat) ?></span>
+                                <span class="tz-badge-trash-time"><i class="bi bi-clock-history"></i><?= htmlspecialchars($item['deleted_time'] ?? 'Đã xóa') ?></span>
+                            </div>
+
+                            <!-- Dòng cấu hình kỹ thuật -->
+                            <div class="text-muted text-truncate mb-2" style="font-size: 12px;" title="<?= htmlspecialchars($thongSo) ?>">
+                                <i class="bi bi-cpu me-1 text-primary"></i><?= htmlspecialchars($thongSo) ?>
+                            </div>
+
+                            <!-- Giá bán, tồn kho, vị trí, bảo hành -->
+                            <div class="d-flex flex-wrap align-items-center gap-3" style="font-size: 12.5px;">
+                                <span class="fw-bold text-danger fs-6"><?= $giaBanFormatted ?> ₫</span>
+
+                                <?php if ($inStock > 0): ?>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold">
+                                        <?= $inStock ?> chiếc
+                                    </span>
+                                <?php else: ?>
+                                    <span class="badge bg-danger text-white fw-bold px-2 py-0.5">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>HẾT HÀNG (0)
+                                    </span>
+                                <?php endif; ?>
+
+                                <span class="text-muted"><i class="bi bi-shield-check me-1"></i><?= $baoHanh ?> tháng</span>
+                                <span class="text-muted"><i class="bi bi-geo-alt-fill text-danger me-1"></i><?= htmlspecialchars($viTri) ?></span>
+                            </div>
+                        </div>
+
+                        <!-- 3 Nút Thao tác: Xem chi tiết (Popup) - Khôi phục - Xóa vĩnh viễn -->
+                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                            <!-- Nút xem Popup chi tiết -->
+                            <button type="button" class="btn-tz-detail" onclick="openDetailPopup('<?= htmlspecialchars($maSP) ?>', '<?= htmlspecialchars(addslashes($tenSP)) ?>', '<?= htmlspecialchars(addslashes($thongSo)) ?>', '<?= htmlspecialchars($brand) ?>', '<?= htmlspecialchars($cat) ?>', '<?= $giaBanFormatted ?>', '<?= $inStock ?>', '<?= htmlspecialchars($viTri) ?>', '<?= $baoHanh ?>')" title="Xem chi tiết cấu hình dạng Popup">
+                                <i class="bi bi-eye"></i>
+                            </button>
+
+                            <!-- Form Khôi phục -->
+                            <form method="POST" action="backup.php" class="d-inline">
+                                <input type="hidden" name="action" value="restore">
+                                <input type="hidden" name="maSP" value="<?= htmlspecialchars($maSP) ?>">
+                                <button type="submit" class="btn-tz-restore" title="Khôi phục lại vào danh sách bán"
+                                    data-tz-confirm="Bạn có chắc muốn khôi phục sản phẩm <?= htmlspecialchars($tenSP) ?> (<?= htmlspecialchars($maSP) ?>) trở lại danh sách bán hàng?"
+                                    data-tz-title="Xác nhận khôi phục"
+                                    data-tz-type="success">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            </form>
+
+                            <!-- Form Xóa vĩnh viễn -->
+                            <form method="POST" action="backup.php" class="d-inline">
+                                <input type="hidden" name="action" value="force_delete">
+                                <input type="hidden" name="maSP" value="<?= htmlspecialchars($maSP) ?>">
+                                <button type="submit" class="btn-tz-force-del" title="Xóa vĩnh viễn khỏi CSDL"
+                                    data-tz-confirm="CẢNH BÁO: Dữ liệu của sản phẩm <?= htmlspecialchars($tenSP) ?> (<?= htmlspecialchars($maSP) ?>) sẽ bị xóa hoàn toàn khỏi cơ sở dữ liệu và không thể lấy lại!"
+                                    data-tz-title="Xác nhận xóa vĩnh viễn"
+                                    data-tz-type="danger">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+                        </div>
+
                     </div>
-
-                    <!-- 3 Nút Thao tác: Xem chi tiết (Popup) - Khôi phục - Xóa vĩnh viễn -->
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                        <!-- Nút xem Popup chi tiết -->
-                        <button type="button" class="btn-tz-detail" onclick="openDetailPopup('<?= htmlspecialchars($maSP) ?>', '<?= htmlspecialchars(addslashes($tenSP)) ?>', '<?= htmlspecialchars(addslashes($thongSo)) ?>', '<?= htmlspecialchars($brand) ?>', '<?= htmlspecialchars($cat) ?>', '<?= $giaBanFormatted ?>', '<?= $inStock ?>', '<?= htmlspecialchars($viTri) ?>', '<?= $baoHanh ?>')" title="Xem chi tiết cấu hình dạng Popup">
-                            <i class="bi bi-eye"></i>
-                        </button>
-
-                        <!-- Nút Khôi phục -->
-                        <button type="button" class="btn-tz-restore" onclick="actionRestore('<?= htmlspecialchars($maSP) ?>', '<?= htmlspecialchars(addslashes($tenSP)) ?>')" title="Khôi phục lại vào danh sách bán">
-                            <i class="bi bi-arrow-counterclockwise"></i>
-                        </button>
-
-                        <!-- Nút Xóa vĩnh viễn -->
-                        <button type="button" class="btn-tz-force-del" onclick="actionForceDelete('<?= htmlspecialchars($maSP) ?>', '<?= htmlspecialchars(addslashes($tenSP)) ?>')" title="Xóa vĩnh viễn khỏi CSDL">
-                            <i class="bi bi-trash3"></i>
-                        </button>
-                    </div>
-
-                </div>
                 <?php endforeach; ?>
             </div>
 
@@ -626,7 +648,7 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($trashList as $item): 
+                            <?php foreach ($trashList as $item):
                                 $giaBanFormatted = number_format($item['giaBan'] ?? 0, 0, ',', '.');
                                 $brand = $item['tenTH'] ?? 'Khác';
                                 $cat = $item['tenDM'] ?? 'Khác';
@@ -637,42 +659,56 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                                 $viTri = $item['viTriKho'] ?? '';
                                 $baoHanh = $item['thoiGianBaoHanh'] ?? 24;
                             ?>
-                            <tr class="trash-row-item" data-masp="<?= htmlspecialchars($maSP) ?>" data-tensp="<?= htmlspecialchars(strtolower($tenSP)) ?>" data-brand="<?= htmlspecialchars(strtolower($brand)) ?>" data-cat="<?= htmlspecialchars(strtolower($cat)) ?>" data-status="<?= $item['trangThai'] ?>">
-                                <td>
-                                    <input class="form-check-input item-cb-tbl" type="checkbox" value="<?= htmlspecialchars($maSP) ?>" style="cursor: pointer;">
-                                </td>
-                                <td><span class="badge bg-light text-dark border font-monospace"><?= htmlspecialchars($maSP) ?></span></td>
-                                <td>
-                                    <div class="fw-bold text-dark"><?= htmlspecialchars($tenSP) ?></div>
-                                    <small class="text-muted" style="font-size: 11.5px;"><?= htmlspecialchars($thongSo) ?></small>
-                                </td>
-                                <td><span class="text-secondary"><?= htmlspecialchars($cat) ?></span></td>
-                                <td><span class="fw-bold text-primary"><?= htmlspecialchars($brand) ?></span></td>
-                                <td><span class="fw-bold text-danger"><?= $giaBanFormatted ?> ₫</span></td>
-                                <td>
-                                    <?php if ($inStock > 0): ?>
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold">
-                                            <?= $inStock ?> chiếc
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="badge bg-danger text-white fw-bold px-2 py-1">
-                                            <i class="bi bi-exclamation-triangle-fill me-1"></i>HẾT HÀNG (0)
-                                        </span>
-                                    <?php endif; ?>
-                                </td>
-                                <td><span class="badge bg-light text-secondary border"><?= $baoHanh ?> tháng</span></td>
-                                <td><small class="text-muted"><i class="bi bi-geo-alt-fill text-danger me-1"></i><?= htmlspecialchars($viTri) ?></small></td>
-                                <td class="text-end">
-                                    <div class="d-inline-flex gap-1">
-                                        <button type="button" class="btn btn-sm btn-outline-success" onclick="actionRestore('<?= htmlspecialchars($maSP) ?>', '<?= htmlspecialchars(addslashes($tenSP)) ?>')" title="Khôi phục">
-                                            <i class="bi bi-arrow-counterclockwise"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="actionForceDelete('<?= htmlspecialchars($maSP) ?>', '<?= htmlspecialchars(addslashes($tenSP)) ?>')" title="Xóa vĩnh viễn">
-                                            <i class="bi bi-trash3"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
+                                <tr class="trash-row-item" data-masp="<?= htmlspecialchars($maSP) ?>" data-tensp="<?= htmlspecialchars(strtolower($tenSP)) ?>" data-brand="<?= htmlspecialchars(strtolower($brand)) ?>" data-cat="<?= htmlspecialchars(strtolower($cat)) ?>" data-status="<?= $item['trangThai'] ?>">
+                                    <td>
+                                        <input class="form-check-input item-cb-tbl" type="checkbox" value="<?= htmlspecialchars($maSP) ?>" style="cursor: pointer;">
+                                    </td>
+                                    <td><span class="badge bg-light text-dark border font-monospace"><?= htmlspecialchars($maSP) ?></span></td>
+                                    <td>
+                                        <div class="fw-bold text-dark"><?= htmlspecialchars($tenSP) ?></div>
+                                        <small class="text-muted" style="font-size: 11.5px;"><?= htmlspecialchars($thongSo) ?></small>
+                                    </td>
+                                    <td><span class="text-secondary"><?= htmlspecialchars($cat) ?></span></td>
+                                    <td><span class="fw-bold text-primary"><?= htmlspecialchars($brand) ?></span></td>
+                                    <td><span class="fw-bold text-danger"><?= $giaBanFormatted ?> ₫</span></td>
+                                    <td>
+                                        <?php if ($inStock > 0): ?>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold">
+                                                <?= $inStock ?> chiếc
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-danger text-white fw-bold px-2 py-1">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>HẾT HÀNG (0)
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><span class="badge bg-light text-secondary border"><?= $baoHanh ?> tháng</span></td>
+                                    <td><small class="text-muted"><i class="bi bi-geo-alt-fill text-danger me-1"></i><?= htmlspecialchars($viTri) ?></small></td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex gap-1">
+                                            <form method="POST" action="backup.php" class="d-inline">
+                                                <input type="hidden" name="action" value="restore">
+                                                <input type="hidden" name="maSP" value="<?= htmlspecialchars($maSP) ?>">
+                                                <button type="submit" class="btn btn-sm btn-outline-success" title="Khôi phục"
+                                                    data-tz-confirm="Bạn có chắc muốn khôi phục sản phẩm <?= htmlspecialchars($tenSP) ?> (<?= htmlspecialchars($maSP) ?>)?"
+                                                    data-tz-title="Xác nhận khôi phục"
+                                                    data-tz-type="success">
+                                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="backup.php" class="d-inline">
+                                                <input type="hidden" name="action" value="force_delete">
+                                                <input type="hidden" name="maSP" value="<?= htmlspecialchars($maSP) ?>">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa vĩnh viễn"
+                                                    data-tz-confirm="CẢNH BÁO: Xóa vĩnh viễn sản phẩm <?= htmlspecialchars($tenSP) ?> (<?= htmlspecialchars($maSP) ?>) khỏi CSDL?"
+                                                    data-tz-title="Xác nhận xóa vĩnh viễn"
+                                                    data-tz-type="danger">
+                                                    <i class="bi bi-trash3"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -697,9 +733,9 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
     <?php require_once dirname(__DIR__) . '/layouts/footer.php'; ?>
 </div>
 
-<!-- ==============================================================================
+<!-- ==========
      POPUP MODAL: XEM CHI TIẾT SẢN PHẨM TRONG THÙNG RÁC
-     ============================================================================== -->
+     ========== -->
 <div class="modal fade" id="productDetailPopup" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 600px;">
         <div class="modal-content" style="border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden;">
@@ -761,311 +797,316 @@ require_once dirname(__DIR__) . '/layouts/sidebar.php';
                 <span class="text-danger small"><i class="bi bi-clock-history me-1"></i>Trạng thái: Trong Thùng Rác</span>
                 <div class="d-flex gap-2">
                     <button type="button" class="btn btn-light btn-sm px-3 border" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-success btn-sm px-3 fw-semibold" id="popBtnRestore">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i>Khôi phục máy này
-                    </button>
+                    <form method="POST" action="backup.php" id="formPopRestore" class="d-inline">
+                        <input type="hidden" name="action" value="restore">
+                        <input type="hidden" name="maSP" id="popRestoreMasp" value="">
+                        <button type="submit" class="btn btn-success btn-sm px-3 fw-semibold" id="popBtnRestore">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Khôi phục máy này
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ==============================================================================
+<!-- ==========
      JAVASCRIPT XỬ LÝ TƯƠNG TÁC GIAO DIỆN MƯỢT MÀ THEO CHUẨN UI/UX PRO MAX
-     ============================================================================== -->
+     ========== -->
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    // 1. Chuyển đổi giữa Chế độ Thẻ Popup và Chế độ Bảng
-    const btnViewCards = document.getElementById('btnViewCards');
-    const btnViewTable = document.getElementById('btnViewTable');
-    const trashCardsView = document.getElementById('trashCardsView');
-    const trashTableView = document.getElementById('trashTableView');
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Chuyển đổi giữa Chế độ Thẻ Popup và Chế độ Bảng
+        const btnViewCards = document.getElementById('btnViewCards');
+        const btnViewTable = document.getElementById('btnViewTable');
+        const trashCardsView = document.getElementById('trashCardsView');
+        const trashTableView = document.getElementById('trashTableView');
 
-    btnViewCards.addEventListener('click', function () {
-        btnViewCards.classList.add('active');
-        btnViewTable.classList.remove('active');
-        trashCardsView.classList.remove('d-none');
-        trashTableView.classList.add('d-none');
-    });
-
-    btnViewTable.addEventListener('click', function () {
-        btnViewTable.classList.add('active');
-        btnViewCards.classList.remove('active');
-        trashTableView.classList.remove('d-none');
-        trashCardsView.classList.add('d-none');
-    });
-
-    // 2. Tìm kiếm và Lọc dữ liệu tại chỗ
-    const searchInput = document.getElementById('trashSearchInput');
-    const categorySelect = document.getElementById('trashCategorySelect');
-    const brandSelect = document.getElementById('trashBrandSelect');
-    const statusSelect = document.getElementById('trashStatusSelect');
-    const btnFilter = document.getElementById('btnFilterTrigger');
-
-    function applyFilters() {
-        const query = searchInput.value.toLowerCase().trim();
-        const selectedCat = categorySelect.value.toLowerCase().trim();
-        const selectedBrand = brandSelect.value.toLowerCase().trim();
-        const selectedStatus = statusSelect.value.trim();
-
-        const cards = document.querySelectorAll('.tz-popup-item');
-        const rows = document.querySelectorAll('.trash-row-item');
-        let matchCount = 0;
-
-        cards.forEach(card => {
-            const masp = (card.getAttribute('data-masp') || '').toLowerCase();
-            const tensp = (card.getAttribute('data-tensp') || '').toLowerCase();
-            const cat = (card.getAttribute('data-cat') || '').toLowerCase();
-            const brand = (card.getAttribute('data-brand') || '').toLowerCase();
-            const status = card.getAttribute('data-status') || '';
-
-            const mQ = !query || masp.includes(query) || tensp.includes(query);
-            const mC = !selectedCat || cat.includes(selectedCat);
-            const mB = !selectedBrand || brand.includes(selectedBrand);
-            const mS = !selectedStatus || status === selectedStatus;
-
-            if (mQ && mC && mB && mS) {
-                card.style.display = 'flex';
-                matchCount++;
-            } else {
-                card.style.display = 'none';
-            }
+        btnViewCards.addEventListener('click', function() {
+            btnViewCards.classList.add('active');
+            btnViewTable.classList.remove('active');
+            trashCardsView.classList.remove('d-none');
+            trashTableView.classList.add('d-none');
         });
 
-        rows.forEach(row => {
-            const masp = (row.getAttribute('data-masp') || '').toLowerCase();
-            const tensp = (row.getAttribute('data-tensp') || '').toLowerCase();
-            const cat = (row.getAttribute('data-cat') || '').toLowerCase();
-            const brand = (row.getAttribute('data-brand') || '').toLowerCase();
-            const status = row.getAttribute('data-status') || '';
-
-            const mQ = !query || masp.includes(query) || tensp.includes(query);
-            const mC = !selectedCat || cat.includes(selectedCat);
-            const mB = !selectedBrand || brand.includes(selectedBrand);
-            const mS = !selectedStatus || status === selectedStatus;
-
-            if (mQ && mC && mB && mS) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+        btnViewTable.addEventListener('click', function() {
+            btnViewTable.classList.add('active');
+            btnViewCards.classList.remove('active');
+            trashTableView.classList.remove('d-none');
+            trashCardsView.classList.add('d-none');
         });
 
-        const emptyBox = document.getElementById('trashEmptyBox');
-        if (matchCount === 0) {
-            emptyBox.classList.remove('d-none');
-        } else {
-            emptyBox.classList.add('d-none');
-        }
-    }
+        // 2. Tìm kiếm và Lọc dữ liệu tại chỗ
+        const searchInput = document.getElementById('trashSearchInput');
+        const categorySelect = document.getElementById('trashCategorySelect');
+        const brandSelect = document.getElementById('trashBrandSelect');
+        const statusSelect = document.getElementById('trashStatusSelect');
+        const btnFilter = document.getElementById('btnFilterTrigger');
 
-    searchInput.addEventListener('input', applyFilters);
-    categorySelect.addEventListener('change', applyFilters);
-    brandSelect.addEventListener('change', applyFilters);
-    statusSelect.addEventListener('change', applyFilters);
-    btnFilter.addEventListener('click', applyFilters);
+        function applyFilters() {
+            const query = searchInput.value.toLowerCase().trim();
+            const selectedCat = categorySelect.value.toLowerCase().trim();
+            const selectedBrand = brandSelect.value.toLowerCase().trim();
+            const selectedStatus = statusSelect.value.trim();
 
-    // 3. Chọn tất cả & Thao tác hàng loạt
-    const checkAll = document.getElementById('checkAllItems');
-    const selectedText = document.getElementById('selectedText');
-    const btnBatchRestore = document.getElementById('btnBatchRestore');
-    const btnBatchDelete = document.getElementById('btnBatchDelete');
+            const cards = document.querySelectorAll('.tz-popup-item');
+            const rows = document.querySelectorAll('.trash-row-item');
+            let matchCount = 0;
 
-    function updateSelectedCount() {
-        const checked = document.querySelectorAll('.item-cb:checked, .item-cb-tbl:checked');
-        const uniqueSet = new Set(Array.from(checked).map(c => c.value));
-        const count = uniqueSet.size;
+            cards.forEach(card => {
+                const masp = (card.getAttribute('data-masp') || '').toLowerCase();
+                const tensp = (card.getAttribute('data-tensp') || '').toLowerCase();
+                const cat = (card.getAttribute('data-cat') || '').toLowerCase();
+                const brand = (card.getAttribute('data-brand') || '').toLowerCase();
+                const status = card.getAttribute('data-status') || '';
 
-        selectedText.textContent = `Đã chọn: ${count} sản phẩm`;
-        if (count > 0) {
-            btnBatchRestore.classList.remove('d-none');
-            btnBatchDelete.classList.remove('d-none');
-        } else {
-            btnBatchRestore.classList.add('d-none');
-            btnBatchDelete.classList.add('d-none');
-        }
-    }
+                const mQ = !query || masp.includes(query) || tensp.includes(query);
+                const mC = !selectedCat || cat.includes(selectedCat);
+                const mB = !selectedBrand || brand.includes(selectedBrand);
+                const mS = !selectedStatus || status === selectedStatus;
 
-    checkAll.addEventListener('change', function () {
-        const isChecked = this.checked;
-        document.querySelectorAll('.item-cb, .item-cb-tbl').forEach(cb => {
-            cb.checked = isChecked;
-            const parent = cb.closest('.tz-popup-item');
-            if (parent) {
-                if (isChecked) parent.classList.add('selected');
-                else parent.classList.remove('selected');
-            }
-        });
-        updateSelectedCount();
-    });
-
-    document.querySelectorAll('.item-cb, .item-cb-tbl').forEach(cb => {
-        cb.addEventListener('change', function () {
-            const parent = this.closest('.tz-popup-item');
-            if (parent) {
-                if (this.checked) parent.classList.add('selected');
-                else parent.classList.remove('selected');
-            }
-            updateSelectedCount();
-        });
-    });
-
-    btnBatchRestore.addEventListener('click', function () {
-        showToastMsg('Đã khôi phục thành công các sản phẩm đã chọn về kho hàng!');
-        removeCheckedItems();
-    });
-
-    btnBatchDelete.addEventListener('click', function () {
-        if (confirm('Bạn có chắc muốn xóa vĩnh viễn các sản phẩm đã chọn? Thao tác này không thể hoàn tác!')) {
-            showToastMsg('Đã xóa vĩnh viễn các sản phẩm đã chọn khỏi CSDL!');
-            removeCheckedItems();
-        }
-    });
-
-    function removeCheckedItems() {
-        const checked = document.querySelectorAll('.item-cb:checked, .item-cb-tbl:checked');
-        checked.forEach(c => {
-            deleteItemUI(c.value);
-        });
-        checkAll.checked = false;
-        updateSelectedCount();
-    }
-
-    // 4. Dọn sạch toàn bộ thùng rác
-    const btnClearAll = document.getElementById('btnClearAllTrash');
-    btnClearAll.addEventListener('click', function () {
-        if (typeof TechZoneNotify !== 'undefined' && TechZoneNotify.confirm) {
-            TechZoneNotify.confirm({
-                title: 'Dọn sạch Thùng rác?',
-                message: 'CẢNH BÁO: Toàn bộ sản phẩm trong thùng rác sẽ bị xóa vĩnh viễn khỏi hệ thống!',
-                badgeType: 'danger',
-                confirmText: 'Xác nhận dọn sạch',
-                onConfirm: function () {
-                    clearAllUI();
+                if (mQ && mC && mB && mS) {
+                    card.style.display = 'flex';
+                    matchCount++;
+                } else {
+                    card.style.display = 'none';
                 }
             });
-        } else if (confirm('CẢNH BÁO: Bạn có chắc chắn muốn dọn sạch toàn bộ thùng rác?')) {
-            clearAllUI();
+
+            rows.forEach(row => {
+                const masp = (row.getAttribute('data-masp') || '').toLowerCase();
+                const tensp = (row.getAttribute('data-tensp') || '').toLowerCase();
+                const cat = (row.getAttribute('data-cat') || '').toLowerCase();
+                const brand = (row.getAttribute('data-brand') || '').toLowerCase();
+                const status = row.getAttribute('data-status') || '';
+
+                const mQ = !query || masp.includes(query) || tensp.includes(query);
+                const mC = !selectedCat || cat.includes(selectedCat);
+                const mB = !selectedBrand || brand.includes(selectedBrand);
+                const mS = !selectedStatus || status === selectedStatus;
+
+                if (mQ && mC && mB && mS) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            const emptyBox = document.getElementById('trashEmptyBox');
+            if (matchCount === 0) {
+                emptyBox.classList.remove('d-none');
+            } else {
+                emptyBox.classList.add('d-none');
+            }
         }
+
+        searchInput.addEventListener('input', applyFilters);
+        categorySelect.addEventListener('change', applyFilters);
+        brandSelect.addEventListener('change', applyFilters);
+        statusSelect.addEventListener('change', applyFilters);
+        btnFilter.addEventListener('click', applyFilters);
+
+        // 3. Chọn tất cả & Thao tác hàng loạt
+        const checkAll = document.getElementById('checkAllItems');
+        const selectedText = document.getElementById('selectedText');
+        const btnBatchRestore = document.getElementById('btnBatchRestore');
+        const btnBatchDelete = document.getElementById('btnBatchDelete');
+
+        function updateSelectedCount() {
+            const checked = document.querySelectorAll('.item-cb:checked, .item-cb-tbl:checked');
+            const uniqueSet = new Set(Array.from(checked).map(c => c.value));
+            const count = uniqueSet.size;
+
+            selectedText.textContent = `Đã chọn: ${count} sản phẩm`;
+            if (count > 0) {
+                btnBatchRestore.classList.remove('d-none');
+                btnBatchDelete.classList.remove('d-none');
+            } else {
+                btnBatchRestore.classList.add('d-none');
+                btnBatchDelete.classList.add('d-none');
+            }
+        }
+
+        checkAll.addEventListener('change', function() {
+            const isChecked = this.checked;
+            document.querySelectorAll('.item-cb, .item-cb-tbl').forEach(cb => {
+                cb.checked = isChecked;
+                const parent = cb.closest('.tz-popup-item');
+                if (parent) {
+                    if (isChecked) parent.classList.add('selected');
+                    else parent.classList.remove('selected');
+                }
+            });
+            updateSelectedCount();
+        });
+
+        document.querySelectorAll('.item-cb, .item-cb-tbl').forEach(cb => {
+            cb.addEventListener('change', function() {
+                const parent = this.closest('.tz-popup-item');
+                if (parent) {
+                    if (this.checked) parent.classList.add('selected');
+                    else parent.classList.remove('selected');
+                }
+                updateSelectedCount();
+            });
+        });
+
+        btnBatchRestore.addEventListener('click', function() {
+            const checked = document.querySelectorAll('.item-cb:checked, .item-cb-tbl:checked');
+            const ids = Array.from(checked).map(c => c.value).filter(Boolean);
+            if (ids.length === 0) {
+                showToastMsg('Vui lòng chọn ít nhất một sản phẩm!');
+                return;
+            }
+            if (typeof TechZoneNotify !== 'undefined' && TechZoneNotify.confirm) {
+                TechZoneNotify.confirm({
+                    title: 'Khôi phục hàng loạt?',
+                    message: `Bạn có chắc muốn khôi phục ${ids.length} sản phẩm đã chọn trở lại danh sách bán hàng?`,
+                    badgeType: 'success',
+                    type: 'success',
+                    confirmText: 'Khôi phục ngay',
+                    onConfirm: function() {
+                        document.getElementById('batchActionInput').value = 'batch_restore';
+                        document.getElementById('batchSelectedIdsInput').value = ids.join(',');
+                        document.getElementById('formBatchAction').submit();
+                    }
+                });
+            } else if (confirm(`Bạn có chắc muốn khôi phục ${ids.length} sản phẩm đã chọn?`)) {
+                document.getElementById('batchActionInput').value = 'batch_restore';
+                document.getElementById('batchSelectedIdsInput').value = ids.join(',');
+                document.getElementById('formBatchAction').submit();
+            }
+        });
+
+        btnBatchDelete.addEventListener('click', function() {
+            const checked = document.querySelectorAll('.item-cb:checked, .item-cb-tbl:checked');
+            const ids = Array.from(checked).map(c => c.value).filter(Boolean);
+            if (ids.length === 0) {
+                showToastMsg('Vui lòng chọn ít nhất một sản phẩm!');
+                return;
+            }
+            if (typeof TechZoneNotify !== 'undefined' && TechZoneNotify.confirm) {
+                TechZoneNotify.confirm({
+                    title: 'Xóa vĩnh viễn hàng loạt?',
+                    message: `CẢNH BÁO: ${ids.length} sản phẩm đã chọn sẽ bị xóa hoàn toàn khỏi cơ sở dữ liệu và không thể lấy lại!`,
+                    badgeType: 'danger',
+                    type: 'danger',
+                    confirmText: 'Xóa vĩnh viễn',
+                    onConfirm: function() {
+                        document.getElementById('batchActionInput').value = 'batch_delete';
+                        document.getElementById('batchSelectedIdsInput').value = ids.join(',');
+                        document.getElementById('formBatchAction').submit();
+                    }
+                });
+            } else if (confirm(`CẢNH BÁO: Bạn có chắc muốn xóa vĩnh viễn ${ids.length} sản phẩm đã chọn khỏi CSDL? Thao tác này không thể hoàn tác!`)) {
+                document.getElementById('batchActionInput').value = 'batch_delete';
+                document.getElementById('batchSelectedIdsInput').value = ids.join(',');
+                document.getElementById('formBatchAction').submit();
+            }
+        });
     });
 
-    function clearAllUI() {
-        document.querySelectorAll('.tz-popup-item, .trash-row-item').forEach(el => {
+    // Toast / Notification
+    function showToastMsg(msg) {
+        if (typeof TechZoneNotify !== 'undefined' && TechZoneNotify.toastSuccess) {
+            TechZoneNotify.toastSuccess(msg);
+        } else {
+            alert(msg);
+        }
+    }
+
+    // Xóa 1 phần tử trên UI
+    function deleteItemUI(maSP) {
+        const items = document.querySelectorAll(`.tz-popup-item[data-masp="${maSP}"], .trash-row-item[data-masp="${maSP}"]`);
+        items.forEach(el => {
             el.classList.add('tz-item-fade');
             setTimeout(() => el.remove(), 250);
         });
         setTimeout(() => {
-            updateTrashBadge(0);
-            showToastMsg('Đã dọn sạch toàn bộ thùng rác!');
+            const remaining = document.querySelectorAll('.tz-popup-item').length;
+            updateTrashBadge(remaining);
         }, 300);
     }
-});
 
-// Toast / Notification
-function showToastMsg(msg) {
-    if (typeof TechZoneNotify !== 'undefined' && TechZoneNotify.toastSuccess) {
-        TechZoneNotify.toastSuccess(msg);
-    } else {
-        alert(msg);
+    // Cập nhật Badge số lượng
+    function updateTrashBadge(count) {
+        const badge = document.getElementById('tabTrashBadge');
+        const statVal = document.getElementById('statTrashValue');
+        const emptyBox = document.getElementById('trashEmptyBox');
+
+        if (badge) badge.textContent = count;
+        if (statVal) statVal.textContent = count;
+
+        if (count === 0 && emptyBox) {
+            emptyBox.classList.remove('d-none');
+        }
     }
-}
 
-// Xóa 1 phần tử trên UI
-function deleteItemUI(maSP) {
-    const items = document.querySelectorAll(`.tz-popup-item[data-masp="${maSP}"], .trash-row-item[data-masp="${maSP}"]`);
-    items.forEach(el => {
-        el.classList.add('tz-item-fade');
-        setTimeout(() => el.remove(), 250);
-    });
-    setTimeout(() => {
-        const remaining = document.querySelectorAll('.tz-popup-item').length;
-        updateTrashBadge(remaining);
-    }, 300);
-}
-
-// Cập nhật Badge số lượng
-function updateTrashBadge(count) {
-    const badge = document.getElementById('tabTrashBadge');
-    const statVal = document.getElementById('statTrashValue');
-    const emptyBox = document.getElementById('trashEmptyBox');
-
-    if (badge) badge.textContent = count;
-    if (statVal) statVal.textContent = count;
-
-    if (count === 0 && emptyBox) {
-        emptyBox.classList.remove('d-none');
-    }
-}
-
-// Thao tác Khôi phục 1 sản phẩm
-function actionRestore(maSP, tenSP) {
-    if (typeof TechZoneNotify !== 'undefined' && TechZoneNotify.confirm) {
-        TechZoneNotify.confirm({
-            title: 'Khôi phục sản phẩm?',
-            message: `Bạn có chắc muốn khôi phục sản phẩm "${tenSP}" (${maSP}) trở lại danh sách bán hàng?`,
-            badgeType: 'success',
-            confirmText: 'Khôi phục ngay',
-            onConfirm: function () {
+    // Thao tác Khôi phục 1 sản phẩm
+    function actionRestore(maSP, tenSP) {
+        if (typeof TechZoneNotify !== 'undefined' && TechZoneNotify.confirm) {
+            TechZoneNotify.confirm({
+                title: 'Khôi phục sản phẩm?',
+                message: `Bạn có chắc muốn khôi phục sản phẩm "${tenSP}" (${maSP}) trở lại danh sách bán hàng?`,
+                badgeType: 'success',
+                confirmText: 'Khôi phục ngay',
+                onConfirm: function() {
+                    deleteItemUI(maSP);
+                    showToastMsg(`Đã khôi phục sản phẩm "${tenSP}" thành công!`);
+                }
+            });
+        } else {
+            if (confirm(`Bạn có chắc muốn khôi phục sản phẩm "${tenSP}" (${maSP})?`)) {
                 deleteItemUI(maSP);
                 showToastMsg(`Đã khôi phục sản phẩm "${tenSP}" thành công!`);
             }
-        });
-    } else {
-        if (confirm(`Bạn có chắc muốn khôi phục sản phẩm "${tenSP}" (${maSP})?`)) {
-            deleteItemUI(maSP);
-            showToastMsg(`Đã khôi phục sản phẩm "${tenSP}" thành công!`);
         }
     }
-}
 
-// Thao tác Xóa vĩnh viễn 1 sản phẩm
-function actionForceDelete(maSP, tenSP) {
-    if (typeof TechZoneNotify !== 'undefined' && TechZoneNotify.confirm) {
-        TechZoneNotify.confirm({
-            title: 'Xóa vĩnh viễn sản phẩm?',
-            message: `CẢNH BÁO: Dữ liệu của sản phẩm "${tenSP}" (${maSP}) sẽ bị xóa hoàn toàn khỏi cơ sở dữ liệu và không thể lấy lại!`,
-            badgeType: 'danger',
-            confirmText: 'Xóa vĩnh viễn',
-            onConfirm: function () {
+    // Thao tác Xóa vĩnh viễn 1 sản phẩm
+    function actionForceDelete(maSP, tenSP) {
+        if (typeof TechZoneNotify !== 'undefined' && TechZoneNotify.confirm) {
+            TechZoneNotify.confirm({
+                title: 'Xóa vĩnh viễn sản phẩm?',
+                message: `CẢNH BÁO: Dữ liệu của sản phẩm "${tenSP}" (${maSP}) sẽ bị xóa hoàn toàn khỏi cơ sở dữ liệu và không thể lấy lại!`,
+                badgeType: 'danger',
+                confirmText: 'Xóa vĩnh viễn',
+                onConfirm: function() {
+                    deleteItemUI(maSP);
+                    showToastMsg(`Đã xóa vĩnh viễn sản phẩm ${maSP} khỏi hệ thống!`);
+                }
+            });
+        } else {
+            if (confirm(`CẢNH BÁO: Xóa vĩnh viễn sản phẩm "${tenSP}" (${maSP})? Thao tác này không thể hoàn tác!`)) {
                 deleteItemUI(maSP);
                 showToastMsg(`Đã xóa vĩnh viễn sản phẩm ${maSP} khỏi hệ thống!`);
             }
-        });
-    } else {
-        if (confirm(`CẢNH BÁO: Xóa vĩnh viễn sản phẩm "${tenSP}" (${maSP})? Thao tác này không thể hoàn tác!`)) {
-            deleteItemUI(maSP);
-            showToastMsg(`Đã xóa vĩnh viễn sản phẩm ${maSP} khỏi hệ thống!`);
         }
     }
-}
 
-// Mở Popup Chi Tiết Cấu Hình
-let currentPopMasp = '';
-let currentPopTensp = '';
-function openDetailPopup(maSP, tenSP, specs, brand, cat, price, stock, location, warranty) {
-    currentPopMasp = maSP;
-    currentPopTensp = tenSP;
+    // Mở Popup Chi Tiết Cấu Hình
+    let currentPopMasp = '';
+    let currentPopTensp = '';
 
-    document.getElementById('popTitle').textContent = `Chi Tiết Sản Phẩm: ${tenSP}`;
-    document.getElementById('popSubTitle').textContent = `Mã sản phẩm: ${maSP}`;
-    document.getElementById('popName').textContent = tenSP;
-    document.getElementById('popSpecs').textContent = specs || 'Chưa cập nhật thông số chi tiết';
-    document.getElementById('popBrandCat').textContent = `${brand} - ${cat}`;
-    document.getElementById('popPrice').textContent = `${price} ₫`;
-    document.getElementById('popStock').textContent = `${stock} chiếc`;
-    document.getElementById('popWarranty').textContent = `${warranty} tháng`;
-    document.getElementById('popLocation').textContent = location || 'Chưa có vị trí';
+    function openDetailPopup(maSP, tenSP, specs, brand, cat, price, stock, location, warranty) {
+        currentPopMasp = maSP;
+        currentPopTensp = tenSP;
 
-    const modalEl = document.getElementById('productDetailPopup');
-    if (window.bootstrap && window.bootstrap.Modal) {
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
+        document.getElementById('popTitle').textContent = `Chi Tiết Sản Phẩm: ${tenSP}`;
+        document.getElementById('popSubTitle').textContent = `Mã sản phẩm: ${maSP}`;
+        document.getElementById('popName').textContent = tenSP;
+        document.getElementById('popSpecs').textContent = specs || 'Chưa cập nhật thông số chi tiết';
+        document.getElementById('popBrandCat').textContent = `${brand} - ${cat}`;
+        document.getElementById('popPrice').textContent = `${price} ₫`;
+        document.getElementById('popStock').textContent = `${stock} chiếc`;
+        document.getElementById('popWarranty').textContent = `${warranty} tháng`;
+        document.getElementById('popLocation').textContent = location || 'Chưa có vị trí';
+        const popRestoreInput = document.getElementById('popRestoreMasp');
+        if (popRestoreInput) popRestoreInput.value = maSP;
 
-        const popBtnRestore = document.getElementById('popBtnRestore');
-        popBtnRestore.onclick = function () {
-            modal.hide();
-            actionRestore(currentPopMasp, currentPopTensp);
-        };
+        const modalEl = document.getElementById('productDetailPopup');
+        if (window.bootstrap && window.bootstrap.Modal) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
     }
-}
 </script>

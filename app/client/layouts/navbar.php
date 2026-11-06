@@ -69,16 +69,40 @@ $allCategories = [
             </a>
 
             <!-- Nút Giỏ Hàng Nổi Bật -->
-            <a href="<?= BASE_URL ?>/client/cart.php" class="btn-tz-cart">
+            <a href="<?= BASE_URL ?>/client/cart.php" class="btn-tz-cart" title="Xem giỏ hàng của bạn">
                 <i class="bi bi-bag"></i>
                 <span class="d-none d-sm-inline">Giỏ hàng</span>
-                <span class="cart-badge cart-badge-count">1</span>
+                <span class="cart-badge cart-badge-count"><?= (int)($globalCartCount ?? 0) ?></span>
             </a>
+            <!-- Khu vực Tài khoản / Đăng nhập -->
+            <div class="user-auth-section d-flex align-items-center" style="gap: 12px;">
+                <?php if (isset($_SESSION['login']) && $_SESSION['login'] === true): ?>
 
-            <!-- Tài khoản / Đăng nhập -->
-            <a href="<?= BASE_URL ?>/login.php" class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Tài khoản cá nhân">
-                <i class="bi bi-person fs-5 text-dark"></i>
-            </a>
+                    <!-- TRẠNG THÁI ĐÃ ĐĂNG NHẬP -->
+                    <div class="d-flex align-items-center shadow-sm" style="background-color: #f8f9fa; border: 1px solid #dee2e6; padding: 4px 12px 4px 6px; border-radius: 30px;">
+                        <a href="<?= BASE_URL ?>/client/tra-cuu.php" class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center text-decoration-none shadow-sm" style="width: 32px; height: 32px; font-weight: bold; margin-right: 8px;" title="Xem thông tin đơn hàng & bảo hành">
+                            <i class="bi bi-person-fill fs-6"></i>
+                        </a>
+                        <a href="<?= BASE_URL ?>/client/tra-cuu.php" class="text-decoration-none text-dark" style="font-size: 13.5px; font-weight: 600; margin-right: 12px; white-space: nowrap;" title="Xem đơn hàng & bảo hành của bạn">
+                            <?= htmlspecialchars($_SESSION['user_name'] ?? 'Khách hàng') ?>
+                        </a>
+
+                        <!-- Nút Đăng xuất -->
+                        <a href="/computer-shop/app/auth/logout.php" title="Đăng xuất khỏi hệ thống" style="color: #dc3545; font-size: 17px; text-decoration: none; transition: 0.2s;">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </a>
+                    </div>
+
+                <?php else: ?>
+
+                    <!-- TRẠNG THÁI CHƯA ĐĂNG NHẬP -->
+                    <a href="<?= BASE_URL ?>/login.php" class="btn btn-sm btn-light border rounded-pill d-flex align-items-center gap-1.5 px-3 py-1.5 text-decoration-none shadow-sm" style="font-size: 13px; font-weight: 600; transition: all 0.3s ease;" title="Đăng nhập / Đăng ký">
+                        <i class="bi bi-person-circle fs-5 text-primary"></i>
+                        <span class="d-none d-sm-inline text-dark">Đăng nhập</span>
+                    </a>
+
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 </nav>
@@ -98,21 +122,23 @@ $allCategories = [
                     <!-- Mega Menu Dropdown chứa tất cả danh mục -->
                     <ul class="dropdown-menu shadow-lg border-0 p-2" aria-labelledby="catalogDropdownBtn" style="border-radius: 0 0 12px 12px; min-width: 250px; max-height: 480px; overflow-y: auto;">
                         <?php foreach ($allCategories as $c): ?>
-                        <li>
-                            <a class="dropdown-item py-2 px-3 rounded d-flex align-items-center justify-content-between" href="<?= BASE_URL ?>/client/index.php?dm=<?= $c['slug'] ?>">
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="bi <?= $c['icon'] ?> text-primary fs-6" style="width: 20px;"></i>
-                                    <span class="fw-semibold text-dark" style="font-size: 13px;"><?= $c['name'] ?></span>
-                                </div>
-                                <?php if (!empty($c['badge'])): ?>
-                                    <span class="badge <?= $c['badgeClass'] ?>" style="font-size: 10px;"><?= $c['badge'] ?></span>
-                                <?php else: ?>
-                                    <i class="bi bi-chevron-right text-muted" style="font-size: 11px;"></i>
-                                <?php endif; ?>
-                            </a>
-                        </li>
+                            <li>
+                                <a class="dropdown-item py-2 px-3 rounded d-flex align-items-center justify-content-between" href="<?= BASE_URL ?>/client/index.php?dm=<?= $c['slug'] ?>">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi <?= $c['icon'] ?> text-primary fs-6" style="width: 20px;"></i>
+                                        <span class="fw-semibold text-dark" style="font-size: 13px;"><?= $c['name'] ?></span>
+                                    </div>
+                                    <?php if (!empty($c['badge'])): ?>
+                                        <span class="badge <?= $c['badgeClass'] ?>" style="font-size: 10px;"><?= $c['badge'] ?></span>
+                                    <?php else: ?>
+                                        <i class="bi bi-chevron-right text-muted" style="font-size: 11px;"></i>
+                                    <?php endif; ?>
+                                </a>
+                            </li>
                         <?php endforeach; ?>
-                        <li><hr class="dropdown-divider my-2"></li>
+                        <li>
+                            <hr class="dropdown-divider my-2">
+                        </li>
                         <li>
                             <a class="dropdown-item py-2 px-3 text-primary fw-bold small text-center" href="<?= BASE_URL ?>/client/index.php">
                                 <i class="bi bi-grid me-1"></i>Xem tất cả sản phẩm
@@ -131,26 +157,12 @@ $allCategories = [
                         </a>
                     </li>
                     <li class="tz-nav-item">
-                        <a href="<?= BASE_URL ?>/client/index.php?q=sale">
+                        <a href="<?= BASE_URL ?>/client/index.php?sale=1">
                             <i class="bi bi-fire text-danger"></i>Khuyến mãi Hot
                             <span class="nav-badge-hot">SALE</span>
                         </a>
                     </li>
-                    <li class="tz-nav-item">
-                        <a href="<?= BASE_URL ?>/client/index.php?dm=gaming" class="<?= $activeCategory === 'gaming' ? 'active' : '' ?>">
-                            <i class="bi bi-controller text-danger"></i>Laptop Gaming
-                        </a>
-                    </li>
-                    <li class="tz-nav-item">
-                        <a href="<?= BASE_URL ?>/client/index.php?dm=van-phong" class="<?= $activeCategory === 'van-phong' ? 'active' : '' ?>">
-                            <i class="bi bi-briefcase text-primary"></i>Laptop Văn Phòng
-                        </a>
-                    </li>
-                    <li class="tz-nav-item">
-                        <a href="<?= BASE_URL ?>/client/index.php?dm=do-hoa" class="<?= $activeCategory === 'do-hoa' ? 'active' : '' ?>">
-                            <i class="bi bi-palette text-warning"></i>Laptop Đồ Họa
-                        </a>
-                    </li>
+
                     <li class="tz-nav-item">
                         <a href="<?= BASE_URL ?>/client/tra-cuu.php">
                             <i class="bi bi-shield-check text-success"></i>Tra cứu bảo hành
