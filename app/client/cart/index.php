@@ -317,9 +317,13 @@ foreach ($dbCartItems as $it) {
                                 <i class="bi bi-x-octagon-fill fs-5 text-danger flex-shrink-0"></i>
                                 <div>Vui lòng xóa các sản phẩm <strong>Tạm hết hàng</strong> khỏi giỏ để có thể tiến hành đặt hàng!</div>
                             </div>
-                        <?php else: ?>
-                            <a href="<?= BASE_URL ?>/client/checkout.php?kh=<?= $activeMaKH ?>" class="btn btn-tz-cta w-100 py-3 text-center justify-content-center" id="btnCheckout">
+                        <?php elseif ($isLoggedIn): ?>
+                            <a href="<?= BASE_URL ?>/client/checkout.php" class="btn btn-tz-cta w-100 py-3 text-center justify-content-center" id="btnCheckout">
                                 <i class="bi bi-credit-card me-1"></i>Tiến Hành Đặt Hàng (Checkout)
+                            </a>
+                        <?php else: ?>
+                            <a href="<?= BASE_URL ?>/login.php?redirect=checkout" class="btn btn-tz-cta w-100 py-3 text-center justify-content-center" id="btnCheckout">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>Đăng Nhập Để Đặt Hàng
                             </a>
                         <?php endif; ?>
                     </div>

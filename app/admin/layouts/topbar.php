@@ -38,15 +38,15 @@
                     <i class="bi bi-person-fill"></i>
                 </div>
                 <div class="d-none d-md-block text-start" style="line-height: 1.2;">
-                    <div class="fw-bold text-dark" style="font-size: 13px;">Đang Tài</div>
-                    <small class="text-muted" style="font-size: 11px;">Admin Quản trị</small>
+                    <div class="fw-bold text-dark" style="font-size: 13px;"><?= htmlspecialchars($_SESSION['user_name'] ?? 'Quản Trị Viên') ?></div>
+                    <small class="text-muted" style="font-size: 11px;"><?= htmlspecialchars(strtoupper($_SESSION['role'] ?? 'ADMIN')) ?></small>
                 </div>
             </a>
             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 py-2" style="border-radius: 10px;">
                 <li><a class="dropdown-item py-2" href="../tai-khoan/tai-khoan.php"><i class="bi bi-person me-2"></i>Hồ sơ & Tài khoản</a></li>
                 <li><a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#modalDoiMatKhau"><i class="bi bi-key me-2"></i>Đổi mật khẩu</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item py-2 text-danger" href="/computer-shop/public/login.php"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
+                <li><a class="dropdown-item py-2 text-danger" href="/computer-shop/app/auth/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
             </ul>
         </div>
     </div>

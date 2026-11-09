@@ -97,7 +97,7 @@ $adminUrl = '/computer-shop/app/admin';
 
         <!-- Đăng xuất -->
         <div class="tz-menu-group">Đăng xuất</div>
-        <a href="/computer-shop/public/login.php" class="tz-nav-link text-danger">
+        <a href="/computer-shop/app/auth/logout.php" class="tz-nav-link text-danger">
             <i class="bi bi-box-arrow-right text-danger"></i>
             <span class="text-danger">Đăng xuất</span>
         </a>

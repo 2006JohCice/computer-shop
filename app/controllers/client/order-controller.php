@@ -38,20 +38,37 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// BẮT BUỘC ĐĂNG NHẬP: Chưa đăng nhập không thể tạo đơn hàng
+if (!isset($_SESSION['login']) || $_SESSION['login'] !== true || empty($_SESSION['maTk'])) {
+    echo json_encode(['success' => false, 'message' => 'Bạn chưa đăng nhập! Vui lòng đăng nhập tài khoản để đặt hàng.']);
+    exit;
+}
+
 $cartItems = $data['cartItems'] ?? [];
 $maKH = '';
 
-// Lấy mã khách hàng từ Session đăng nhập
-if (isset($_SESSION['login']) && $_SESSION['login'] === true && !empty($_SESSION['maTk'])) {
-    $sessionMaTk = $conn->real_escape_string($_SESSION['maTk']);
-    $resKH = $conn->query("SELECT maKH FROM khachhang WHERE maTk = '$sessionMaTk' LIMIT 1");
-    if ($resKH && $rowKH = $resKH->fetch_assoc()) {
-        $maKH = $rowKH['maKH'];
+// Lấy mã khách hàng chính chủ từ Session đăng nhập
+$sessionMaTk = $conn->real_escape_string($_SESSION['maTk']);
+$resKH = $conn->query("SELECT maKH FROM khachhang WHERE maTk = '$sessionMaTk' LIMIT 1");
+if ($resKH && $rowKH = $resKH->fetch_assoc()) {
+    $maKH = $rowKH['maKH'];
+} else {
+    $resAcc = $conn->query("SELECT email FROM accounts WHERE maTk = '$sessionMaTk' LIMIT 1");
+    if ($resAcc && $rAcc = $resAcc->fetch_assoc()) {
+        $emAcc = $conn->real_escape_string($rAcc['email'] ?? '');
+        if (!empty($emAcc)) {
+            $resKHEm = $conn->query("SELECT maKH FROM khachhang WHERE email = '$emAcc' LIMIT 1");
+            if ($resKHEm && $rowKHEm = $resKHEm->fetch_assoc()) {
+                $maKH = $rowKHEm['maKH'];
+                $conn->query("UPDATE khachhang SET maTk = '$sessionMaTk' WHERE maKH = '$maKH'");
+            }
+        }
     }
 }
 
 if (empty($maKH)) {
-    $maKH = $conn->real_escape_string($data['maKH'] ?? $_GET['kh'] ?? 'KH001');
+    echo json_encode(['success' => false, 'message' => 'Không tìm thấy hồ sơ khách hàng liên kết với tài khoản này!']);
+    exit;
 }
 
 // 0. KIỂM TRA TỒN KHO TRƯỚC KHI TẠO ĐƠN

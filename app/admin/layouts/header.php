@@ -1,5 +1,22 @@
 <?php
 // app/views/admin/layouts/header.php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// 1. Kiểm tra session đăng nhập cơ bản cho Admin
+if (!isset($_SESSION['login']) || $_SESSION['login'] !== true) {
+    header("Location: /computer-shop/public/login.php");
+    exit();
+}
+
+// 2. Phân quyền truy cập: Khách hàng thường (role = user) không được vào khu vực quản trị
+$userRole = strtolower(trim($_SESSION['role'] ?? 'user'));
+if ($userRole === 'user') {
+    header("Location: /computer-shop/public/client/index.php");
+    exit();
+}
+
 $configFile = dirname(__DIR__, 2) . '/config/config.php';
 if (!file_exists($configFile)) {
     $configFile = dirname(__DIR__, 3) . '/config/config.php';

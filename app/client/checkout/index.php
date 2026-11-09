@@ -1,6 +1,16 @@
 <?php
 // app/views/client/checkout/index.php
 $pageTitle = "Thanh Toán & Đặt Hàng COD";
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// BẮT BUỘC ĐĂNG NHẬP: Chưa đăng nhập không được phép vào trang thanh toán đặt hàng
+if (!isset($_SESSION['login']) || $_SESSION['login'] !== true || empty($_SESSION['maTk'])) {
+    header("Location: /computer-shop/public/login.php?redirect=checkout");
+    exit();
+}
+
 require_once dirname(__DIR__) . '/layouts/header.php';
 require_once dirname(__DIR__) . '/layouts/navbar.php';
 

@@ -67,18 +67,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['user_name'] = $acc['hoTen'] ?? $user_input;
                         $_SESSION['role'] = $role;
 
-                        // FIX 1: Dùng header() để chuyển trang thay vì javascript
+                        $redirectParam = trim($_GET['redirect'] ?? $_POST['redirect'] ?? '');
                         if ($role === 'user') {
-                            $maTk = $acc['maTk'];
-                            $sqlKH = "SELECT maKH FROM khachhang WHERE maTk = '$maTk' LIMIT 1";
-                            $resKH = $conn->query($sqlKH);
-                            $maKH = 'KH001';
-                            if ($resKH && $resKH->num_rows > 0) {
-                                $rowKH = $resKH->fetch_assoc();
-                                $maKH = $rowKH['maKH'];
+                            if ($redirectParam === 'checkout') {
+                                header("Location: /computer-shop/public/client/checkout.php");
+                                exit();
                             }
-
-                            header("Location: /computer-shop/public/client/index.php?kh=" . urlencode($maKH));
+                            header("Location: /computer-shop/public/client/index.php");
                             exit();
                         } else {
                             // Chuyển hướng Admin
@@ -220,6 +215,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <form class="login-form" method="POST" action="">
                         <input type="hidden" name="action" value="login">
+                        <?php if (!empty($_GET['redirect'])): ?>
+                            <input type="hidden" name="redirect" value="<?= htmlspecialchars($_GET['redirect']) ?>">
+                        <?php endif; ?>
 
                         <!-- Tài khoản hoặc Email -->
                         <div class="form-group-custom">
